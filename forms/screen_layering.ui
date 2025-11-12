@@ -1,208 +1,93 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ScreenLayeringForm</class>
- <widget class="QWidget" name="ScreenLayeringForm">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>960</width>
-    <height>600</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>网版分层</string>
-  </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
+ <class>ScreenLayeringWidget</class>
+ <widget class="QWidget" name="ScreenLayeringWidget">
+  <layout class="QVBoxLayout" name="verticalLayout_layering">
+   <!-- 画布：左侧 SVG 显示 + 翻页按钮 -->
    <item>
-    <widget class="QFrame" name="navigationFrame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <layout class="QVBoxLayout" name="navLayout">
+    <widget class="QWidget" name="layeringCanvas">
+     <layout class="QHBoxLayout" name="canvasLayout">
       <item>
-       <widget class="QLabel" name="titleLabel">
+       <widget class="QPushButton" name="prevLayerButton">
         <property name="text">
-         <string>流程导航</string>
+         <string>◀</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="svgPreview">
+        <property name="text">
+         <string>SVG 预览占位</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignHCenter|Qt::AlignVCenter</set>
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="navImportButton">
+       <widget class="QPushButton" name="nextLayerButton">
         <property name="text">
-         <string>导入生产任务单</string>
+         <string>▶</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="navLayerButton">
+       <widget class="QWidget" name="parametersPanel">
+        <layout class="QFormLayout" name="paramsForm">
+         <item row="0" column="0">
+          <widget class="QLabel" name="labelAperture">
+           <property name="text">
+            <string>孔径</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="apertureLineEdit"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="labelTension">
+           <property name="text">
+            <string>张力</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="tensionLineEdit"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 控制栏 -->
+   <item>
+    <widget class="QWidget" name="controlBar_layering">
+     <layout class="QHBoxLayout" name="controlLayout_layering">
+      <item>
+       <widget class="QPushButton" name="editLayerButton">
         <property name="text">
-         <string>网版分层</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
+         <string>编辑网版</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="navProcessButton">
+       <widget class="QPushButton" name="startProcessButton">
         <property name="text">
-         <string>工艺规划</string>
+         <string>开始工艺规划</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="navProductionButton">
-        <property name="text">
-         <string>生产准备</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="navSpacer">
+       <spacer name="controlSpacer_layering">
         <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
+         <enum>Qt::Horizontal</enum>
         </property>
        </spacer>
       </item>
      </layout>
     </widget>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="rightColumnLayout">
-     <item>
-      <widget class="QFrame" name="canvasFrame">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <layout class="QHBoxLayout" name="canvasLayout">
-        <item>
-         <widget class="QFrame" name="screenFrame">
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <layout class="QHBoxLayout" name="screenLayout">
-           <item>
-            <widget class="QToolButton" name="previousButton">
-             <property name="text">
-              <string>◀</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="screenDisplayLabel">
-             <property name="text">
-              <string>当前网版图案</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QToolButton" name="nextButton">
-             <property name="text">
-              <string>▶</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="parameterGroup">
-          <property name="title">
-           <string>网版设计参数</string>
-          </property>
-          <layout class="QFormLayout" name="parameterLayout">
-           <item row="0" column="0">
-            <widget class="QLabel" name="apertureLabel">
-             <property name="text">
-              <string>孔径</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="apertureEdit">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="tensionLabel">
-             <property name="text">
-              <string>张力</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="tensionEdit">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="inkLabel">
-             <property name="text">
-              <string>油墨</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QLineEdit" name="inkEdit">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QFrame" name="controlFrame">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <layout class="QHBoxLayout" name="controlLayout">
-        <item>
-         <spacer name="controlSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="editButton">
-          <property name="text">
-           <string>编辑网版</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="startProcessPlanningButton">
-          <property name="text">
-           <string>开始工艺规划</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
    </item>
   </layout>
  </widget>

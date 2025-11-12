@@ -9,8 +9,10 @@ HIGHLIGHT_STYLE = "background-color: #3478f6; color: white;"
 DEFAULT_STYLE = ""
 
 
-class ImportTaskScreen(QtWidgets.QWidget):
-    """导入生产任务单界面控制器。"""
+class ImportPage(QtWidgets.QWidget):
+    """
+    Interface for importing production task files and design documents.
+    """
 
     def __init__(self, controller):
         super().__init__()
@@ -18,17 +20,10 @@ class ImportTaskScreen(QtWidgets.QWidget):
         self.controller = controller
         self.selected_task_path: Optional[Path] = None
         self.selected_design_path: Optional[Path] = None
+        # self.setup_ui()
 
-        self._init_nav()
-        self._init_controls()
 
-    def _init_nav(self) -> None:
-        self.navImportButton.clicked.connect(lambda: self.controller.show_screen("import"))
-        self.navLayerButton.clicked.connect(lambda: self.controller.show_screen("layering"))
-        self.navProcessButton.clicked.connect(lambda: self.controller.show_screen("process"))
-        self.navProductionButton.clicked.connect(lambda: self.controller.show_screen("preparation"))
-
-    def _init_controls(self) -> None:
+    def setup_ui(self) -> None:
         self.selectTaskButton.clicked.connect(self.open_task_file)
         self.startLayerButton.clicked.connect(self.goto_screen_layering)
         self.startLayerButton.setEnabled(False)

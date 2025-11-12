@@ -2,6 +2,7 @@
 from typing import TypedDict, List, Literal, Optional, Dict, Any
 from datetime import date
 from langgraph.graph import StateGraph, END
+from pprint import pprint
 
 # =============== 1) 定义工作流的全局 State（可增量合并） ===============
 class ProductionOrder(TypedDict, total=False):
@@ -232,7 +233,6 @@ if __name__ == "__main__":
     result = app.invoke(input_state)
     
     # 你可以把 result 中的各字段落盘/下发到系统：
-    from pprint import pprint
     pprint(result)
 
 

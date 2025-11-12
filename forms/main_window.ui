@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+  <class>MainWindow</class>
+  <widget class="QMainWindow" name="MainWindow">
+    <property name="geometry">
+      <rect>
+        <x>0</x><y>0</y><width>1024</width><height>640</height>
+      </rect>
+    </property>
+    <property name="windowTitle">
+      <string>Versatile Robotics</string>
+    </property>
+    <widget class="QWidget" name="centralwidget">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+        <!-- Left Panel -->
+        <item>
+          <widget class="QWidget" name="leftPanel">
+            <property name="minimumWidth"><number>180</number></property>
+            <layout class="QVBoxLayout" name="btnLayout">
+              <item>
+                <widget class="QPushButton" name="btnImport">
+                  <property name="text"><string>导入指令</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnLayer">
+                  <property name="text"><string>网版分层</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnProcess">
+                  <property name="text"><string>工艺规划</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnPreparation">
+                  <property name="text"><string>生产准备</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <spacer name="verticalSpacer">
+                  <property name="orientation"><enum>Qt::Vertical</enum></property>
+                  <property name="sizeHint" >
+                    <size>
+                      <width>20</width><height>40</height>
+                    </size>
+                  </property>
+                </spacer>
+              </item>
+            </layout>
+          </widget>
+        </item>
+
+        <!-- Right stacked content area -->
+        <item>
+          <widget class="QStackedWidget" name="stackedRight">
+            <!-- Dynamic content -->
+          </widget>
+        </item>
+      </layout>
+    </widget>
+  </widget>
+  <resources/>
+  <connections/>
+</ui>

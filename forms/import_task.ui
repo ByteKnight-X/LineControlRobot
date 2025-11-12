@@ -1,174 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ImportTaskForm</class>
- <widget class="QWidget" name="ImportTaskForm">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>960</width>
-    <height>600</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>导入生产任务单</string>
-  </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
-   <item>
-    <widget class="QFrame" name="navigationFrame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <layout class="QVBoxLayout" name="navLayout">
-      <item>
-       <widget class="QLabel" name="titleLabel">
-        <property name="text">
-         <string>流程导航</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignHCenter|Qt::AlignVCenter</set>
-        </property>
-        <property name="margin">
-         <number>6</number>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="navImportButton">
-        <property name="text">
-         <string>导入生产任务单</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="navLayerButton">
-        <property name="text">
-         <string>网版分层</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="navProcessButton">
-        <property name="text">
-         <string>工艺规划</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="navProductionButton">
-        <property name="text">
-         <string>生产准备</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="navSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
+    <class>ImportPage</class>
+    <widget class="QWidget" name="ImportPage">
+        <layout class="QVBoxLayout" name="importLayout">
+            <!-- Info Panel -->
+            <item stretch="10">
+                <layout class="QHBoxLayout" name="topImportLayout">
+                    <item>
+                        <widget class="QTextEdit" name="txtInstructions">
+                            <property name="styleSheet">
+                                <string>border: 1px solid #888888;</string>
+                            </property>
+                            <property name="sizePolicy">
+                                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                    <horstretch>1</horstretch>
+                                    <verstretch>1</verstretch>
+                                </sizepolicy>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLabel" name="patternDesign">
+                            <property name="styleSheet">
+                                <string>border: 1px solid #888888; background-color: white;</string>
+                            </property>
+                            <property name="sizePolicy">
+                                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                    <horstretch>1</horstretch>
+                                    <verstretch>1</verstretch>
+                                </sizepolicy>
+                            </property>
+                        </widget>
+                    </item>
+                </layout> 
+            </item>
+
+            <!-- Control Panel -->
+            <item stretch="1">
+                <widget class="QWidget" name="controlPanel">
+                    <layout class="QHBoxLayout" name="controlLayout">
+                        <item>
+                            <widget class="QPushButton" name="btnSelectTask">
+                                <property name="text"><string>选择生产任务单</string></property>
+                            </widget>
+                        </item>
+                        <item>
+                            <widget class="QPushButton" name="btnStartLayering">
+                                <property name="text"><string>开始网版分层</string></property>
+                                <property name="enabled"><bool>false</bool></property>
+                            </widget>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
+        </layout>
     </widget>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="rightColumnLayout">
-     <item>
-      <widget class="QFrame" name="canvasFrame">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <layout class="QHBoxLayout" name="canvasLayout">
-        <item>
-         <widget class="QGroupBox" name="taskGroup">
-          <property name="title">
-           <string>生产任务单</string>
-          </property>
-          <layout class="QVBoxLayout" name="taskLayout">
-           <item>
-            <widget class="QTextEdit" name="taskTextEdit">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-             <property name="placeholderText">
-              <string>请先选择生产任务单(.xml)</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="designGroup">
-          <property name="title">
-           <string>图案设计文档</string>
-          </property>
-          <layout class="QVBoxLayout" name="designLayout">
-           <item>
-            <widget class="QTextEdit" name="designTextEdit">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-             <property name="placeholderText">
-              <string>请选择对应图案设计文档(.svg)</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QFrame" name="controlFrame">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <layout class="QHBoxLayout" name="controlLayout">
-        <item>
-         <spacer name="controlSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="selectTaskButton">
-          <property name="text">
-           <string>选择生产任务单</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="startLayerButton">
-          <property name="text">
-           <string>开始网版分层</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
-   </item>
-  </layout>
- </widget>
- <resources/>
- <connections/>
+    <resources/>
+    <connections/>
 </ui>

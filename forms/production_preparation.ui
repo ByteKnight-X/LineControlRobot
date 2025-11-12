@@ -1,186 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ProductionPreparationForm</class>
- <widget class="QWidget" name="ProductionPreparationForm">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>960</width>
-    <height>600</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>生产准备</string>
-  </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
+ <class>ProductionPreparationWidget</class>
+ <widget class="QWidget" name="ProductionPreparationWidget">
+  <layout class="QVBoxLayout" name="prepLayout">
    <item>
-    <widget class="QFrame" name="navigationFrame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+    <widget class="QLabel" name="prepLabel">
+     <property name="text">
+      <string>生产准备清单</string>
      </property>
-     <layout class="QVBoxLayout" name="navLayout">
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="tasksList">
+     <layout class="QVBoxLayout" name="tasksLayout">
       <item>
-       <widget class="QLabel" name="titleLabel">
+       <widget class="QCheckBox" name="action1CheckBox">
         <property name="text">
-         <string>流程导航</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignHCenter|Qt::AlignVCenter</set>
+         <string>准备物料</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="navImportButton">
+       <widget class="QCheckBox" name="action2CheckBox">
         <property name="text">
-         <string>导入生产任务单</string>
+         <string>调试设备</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="navLayerButton">
+       <widget class="QCheckBox" name="action3CheckBox">
         <property name="text">
-         <string>网版分层</string>
+         <string>质检校准</string>
         </property>
        </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="navProcessButton">
-        <property name="text">
-         <string>工艺规划</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="navProductionButton">
-        <property name="text">
-         <string>生产准备</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="navSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
       </item>
      </layout>
     </widget>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="rightColumnLayout">
-     <item>
-      <widget class="QFrame" name="canvasFrame">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <layout class="QVBoxLayout" name="canvasLayout">
-        <item>
-         <widget class="QLabel" name="preparationTitleLabel">
-          <property name="text">
-           <string>生产准备清单</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <property name="margin">
-           <number>6</number>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QScrollArea" name="scrollArea">
-          <property name="widgetResizable">
-           <bool>true</bool>
-          </property>
-          <widget class="QWidget" name="scrollAreaWidgetContents">
-           <layout class="QVBoxLayout" name="actionsLayout">
-            <item>
-             <widget class="QCheckBox" name="actionCheckBox1">
-              <property name="text">
-               <string>检查丝印设备状态</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="actionCheckBox2">
-              <property name="text">
-               <string>准备网版并确认编号</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="actionCheckBox3">
-              <property name="text">
-               <string>确认油墨与溶剂库存</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="actionCheckBox4">
-              <property name="text">
-               <string>配置生产节拍与人员安排</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="actionCheckBox5">
-              <property name="text">
-               <string>完成质检工位准备</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="scrollSpacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QFrame" name="controlFrame">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <layout class="QHBoxLayout" name="controlLayout">
-        <item>
-         <spacer name="controlSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QPushButton" name="startProductionButton">
-          <property name="text">
-           <string>开始生产</string>
-          </property>
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QWidget" name="controlBar_prep">
+     <layout class="QHBoxLayout" name="controlLayout_prep">
+      <item>
+       <widget class="QPushButton" name="startProductionButton">
+        <property name="text">
+         <string>开始生产</string>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="prepSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
    </item>
   </layout>
  </widget>

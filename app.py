@@ -1,48 +1,71 @@
 import sys
 from typing import Dict
-
-from PyQt5 import QtWidgets
-
-from import_task import ImportTaskScreen
-from process_planning import ProcessPlanningScreen
-from production_preparation import ProductionPreparationScreen
-from screen_layering import ScreenLayeringScreen
+from PyQt5 import QtWidgets, uic
+from pathlib import Path
+from utilities.constants import STYLE
+from import_task import ImportPage
 
 
 class MainWindow(QtWidgets.QMainWindow):
-    """多智能体协作流程主窗口。"""
+    """Main application window that manages different screens."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("运动鞋面丝印协作平台")
-        self.resize(1024, 640)
+        uic.loadUi(str(Path(__file__).parent / "forms" / "main_window.ui"), self) # Load main template
+        self.setWindowTitle("Versatile Robotics")
+        self.context = {}
+        self.pages = {}
+        self.setStyleSheet(STYLE)
+        
+        # Connect navigation buttons
+        self.btnImport.clicked.connect(lambda: self.show_page('import', self.btnImport))
+        
+        self.show_page('import', self.btnImport)
+        
+                
+        """
+        # stacked widget 和页面引用（在 main_window.ui 中定义）
+        # 名称为 stackedRight、importPage、layeringPage、processPage、preparationPage
+        self._stack = self.findChild(QtWidgets.QStackedWidget, "stackedRight")
+        self.importPage = self.findChild(QtWidgets.QWidget, "importPage")
+        self.layeringPage = self.findChild(QtWidgets.QWidget, "layeringPage")
+        self.processPage = self.findChild(QtWidgets.QWidget, "processPage")
+        self.preparationPage = self.findChild(QtWidgets.QWidget, "preparationPage")
 
-        self.layering_data = []
-        self.production_plan = ""
-        self.quality_plan = ""
+        # 每个 page 内部有个占位 widget（在 main_window.ui 中分别命名 importPageContent 等）
+        # 把对应的子 UI 加载到这些占位处
+        uic.loadUi(str(Path(__file__).parent / "forms" / "import_task.ui"), self.findChild(QtWidgets.QWidget, "importPageContent"))
+        uic.loadUi(str(Path(__file__).parent / "forms" / "screen_layering.ui"), self.findChild(QtWidgets.QWidget, "layeringPageContent"))
+        uic.loadUi(str(Path(__file__).parent / "forms" / "process_planning.ui"), self.findChild(QtWidgets.QWidget, "processPageContent"))
+        uic.loadUi(str(Path(__file__).parent / "forms" / "production_preparation.ui"), self.findChild(QtWidgets.QWidget, "preparationPageContent"))
 
-        self._stack = QtWidgets.QStackedWidget()
-        self.setCentralWidget(self._stack)
+        # 连接左侧导航按钮，切换 stacked 页
+        self.navImportButton.clicked.connect(lambda: self._stack.setCurrentWidget(self.importPage))
+        self.navLayerButton.clicked.connect(lambda: self._stack.setCurrentWidget(self.layeringPage))
+        self.navProcessButton.clicked.connect(lambda: self._stack.setCurrentWidget(self.processPage))
+        self.navPreparationButton.clicked.connect(lambda: self._stack.setCurrentWidget(self.preparationPage))
 
-        self._screens: Dict[str, QtWidgets.QWidget] = {
-            "import": ImportTaskScreen(self),
-            "layering": ScreenLayeringScreen(self),
-            "process": ProcessPlanningScreen(self),
-            "preparation": ProductionPreparationScreen(self),
-        }
-
-        for screen in self._screens.values():
-            self._stack.addWidget(screen)
-
-        self.show_screen("import")
-
-    def show_screen(self, screen_name: str) -> None:
-        screen = self._screens.get(screen_name)
-        if not screen:
-            return
-        self._stack.setCurrentWidget(screen)
-        if hasattr(screen, "on_show"):
-            screen.on_show()
+        # 初始显示
+        self._stack.setCurrentWidget(self.importPage)
+    
+        """
+        
+    def show_page(self, page_name, btn):
+        # Load dynamic pages
+        if page_name not in self.pages:
+            if page_name == 'import':
+                page = ImportPage(controller=self)
+            # elif page_name == 'planning':
+            #    page = PlanningPage(parent=self)
+            # elif page_name == 'execution':
+            #    page = ExecutionPage(parent=self)
+            # elif page_name == 'planning_progress':
+            #    page = PlanningProgressPage(parent=self)
+            else:
+                return
+            self.stackedRight.addWidget(page)
+            self.pages[page_name] = page
+        self.stackedRight.setCurrentWidget(self.pages[page_name])
 
 
 def main() -> None:
