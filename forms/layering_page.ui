@@ -6,6 +6,12 @@
         <!-- Canvas: Left SVG Display + Pagination Buttons -->
         <item stretch="10">
             <widget class="QWidget" name="layeringCanvas">
+                <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                        <horstretch>1</horstretch>
+                        <verstretch>1</verstretch>
+                    </sizepolicy>
+                </property>
                 <layout class="QHBoxLayout" name="canvasLayout">
                 <item>
                     <widget class="QPushButton" name="prevLayerButton">
@@ -64,6 +70,18 @@
         <!-- Control Panel -->
         <item stretch="1">
             <widget class="QWidget" name="controlBar_layering">
+                <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                    </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                    <size>
+                        <width>16777215</width>
+                        <height>80</height>
+                    </size>
+                </property>
                 <layout class="QHBoxLayout" name="controlLayout_layering">
                 <item>
                     <widget class="QPushButton" name="editLayerButton">
