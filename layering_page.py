@@ -1,21 +1,17 @@
 from typing import List, Optional
-
 from PyQt5 import QtWidgets, uic
 
-from import_task import HIGHLIGHT_STYLE, DEFAULT_STYLE
 
 
-class ScreenLayeringScreen(QtWidgets.QWidget):
+
+class LayeringPage(QtWidgets.QWidget):
     """网版分层界面控制器。"""
 
     def __init__(self, controller):
         super().__init__()
-        uic.loadUi("forms/screen_layering.ui", self)
+        uic.loadUi("forms/layering_page.ui", self)
         self.controller = controller
         self.current_index = 0
-
-        self._init_nav()
-        self._init_controls()
 
     def _init_nav(self) -> None:
         self.navImportButton.clicked.connect(lambda: self.controller.show_screen("import"))

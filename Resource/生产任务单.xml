@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ProductionTask xmlns="urn:linecontrol:prod-task" version="1.0">
+  <Header>
+    <TaskID>123512</TaskID>
+    <CreatedDate>2025-10-29</CreatedDate>
+    <DeliveryDate>2025-11-01</DeliveryDate>
+  </Header>
+
+  <Item>
+    <ProductCode>8Pro</ProductCode>
+    <Part>大面</Part>
+    <Colorway>神行橘</Colorway>
+    <SizeRange>34-35</SizeRange>
+    <Quantity unit="pairs">600</Quantity>
+    <DesignDocument>"D:\04-ProjectFile-LineControl\v0\resource\8Pro_OneItem.svg"</DesignDocument>
+  </Item>
+
+  <Quality>
+    <Requirements><![CDATA[
+      1. 每片缺陷处（沙眼、榨浆、溢色）< 3
+      2. 烘烤后效果厚度不得薄于色卡
+      3. 后跟对接不可有高低
+      ]]>
+    </Requirements>
+  </Quality>
+</ProductionTask>

@@ -1,13 +1,49 @@
 from pathlib import Path
 from typing import Optional
-
+from xml.etree import ElementTree as ET
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt
+import os
 
 
-HIGHLIGHT_STYLE = "background-color: #3478f6; color: white;"
-DEFAULT_STYLE = ""
+class WorkOrder:
+    """
+    Data structure to hold information about the imported task file.
+    """
+    def __init__(self, file_path: str):
+        """ Parse the XML file """
+        self.file_path = file_path
+        try:
+            self.tree = ET.parse(file_path)
+            self.root = self.tree.getroot()
+        except Exception as exc:
+            raise RuntimeError(f"无法读取或解析XML文件: {exc}")
+        self.__parse_content()
 
+    def __parse_content(self) -> None:
+        """ Parse XML content into dictionary and formatted string. """
+        self.__content_dict = {}
+        lines = []
+        for elem in self.root.iter():
+            tag = elem.tag.split('}')[-1] # Remove namespace if present
+            text = (elem.text or "").strip()
+            self.__content_dict[tag] = text
+            lines.append(f"{tag.capitalize()}: {text}\n")
+            print(f"{tag.capitalize()}: {text}")
+        self.__content_str = "".join(lines)
+    
+    def get_content_dict(self) -> dict:
+        """Parse the XML and return content as a dictionary."""
+        return self.__content_dict
+
+    def get_content_str(self) -> str:
+        """Return content formatted for preview."""
+        return self.__content_str
+    
+    
+    
 
 class ImportPage(QtWidgets.QWidget):
     """
@@ -16,108 +52,51 @@ class ImportPage(QtWidgets.QWidget):
 
     def __init__(self, controller):
         super().__init__()
-        uic.loadUi("forms/import_task.ui", self)
+        uic.loadUi("forms/import_page.ui", self)
         self.controller = controller
-        self.selected_task_path: Optional[Path] = None
-        self.selected_design_path: Optional[Path] = None
-        # self.setup_ui()
+        self.setup_ui()
 
 
     def setup_ui(self) -> None:
-        self.selectTaskButton.clicked.connect(self.open_task_file)
-        self.startLayerButton.clicked.connect(self.goto_screen_layering)
-        self.startLayerButton.setEnabled(False)
-
-    def on_show(self) -> None:
-        self._highlight_navigation(self.navImportButton)
-
-    def _highlight_navigation(self, active_button: QtWidgets.QPushButton) -> None:
-        for button in [self.navImportButton, self.navLayerButton, self.navProcessButton, self.navProductionButton]:
-            if button is active_button:
-                button.setStyleSheet(HIGHLIGHT_STYLE)
-                button.setChecked(True)
-            else:
-                button.setStyleSheet(DEFAULT_STYLE)
-                button.setChecked(False)
+        self.btnSelectTask.clicked.connect(self.open_task_file)
+        self.btnStartLayering.clicked.connect(self.start_layering)
+        self.btnStartLayering.setEnabled(False)
 
     def open_task_file(self) -> None:
-        xml_path, _ = QFileDialog.getOpenFileName(self, "选择生产任务单", "", "XML Files (*.xml)")
-        if not xml_path:
+        # Open file dialog to select task file
+        task_file_path, _ = QFileDialog.getOpenFileName(self, "选择生产任务单", "", "XML Files (*.xml)")
+        if not task_file_path:
+            print("No task file selected.")
             return
 
-        design_path, _ = QFileDialog.getOpenFileName(self, "选择图案设计文档", "", "SVG Files (*.svg)")
-        if not design_path:
-            QMessageBox.information(self, "提示", "未选择图案设计文档，将使用占位信息展示。")
-
-        self.selected_task_path = Path(xml_path)
-        self.selected_design_path = Path(design_path) if design_path else None
-
-        self.taskTextEdit.setPlainText(self._read_file_preview(self.selected_task_path))
-        if self.selected_design_path:
-            self.designTextEdit.setPlainText(self._read_file_preview(self.selected_design_path))
+        # Load and preview the selected task file
+        work_order = WorkOrder(task_file_path)
+        self.txtInstructions.setPlainText(work_order.get_content_str())
+        
+        # Load design pattern
+        pattern_design_path = work_order.get_content_dict().get("DesignDocument", "")
+        pattern_design_path = pattern_design_path.strip().strip('"')
+        if not os.path.exists(pattern_design_path):
+            QMessageBox.warning(self, "", f"Pa设计文档不存在:\n{pattern_design_path}")
+            return
+        pixmap = QPixmap(pattern_design_path)
+        if not pixmap.isNull():
+            self.patternDesign.setPixmap(
+                pixmap.scaled(
+                    self.patternDesign.size(),
+                    aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio,
+                    transformMode=Qt.TransformationMode.SmoothTransformation
+                )
+            )
         else:
-            self.designTextEdit.setPlainText("未选择图案设计文档，请稍后补充。")
-
-        self.controller.layering_data = self.controller.layering_data or self._default_layering_data()
-        self.controller.production_plan = self.controller.production_plan or self._default_production_plan()
-        self.controller.quality_plan = self.controller.quality_plan or self._default_quality_plan()
-
-        self.startLayerButton.setEnabled(True)
-
-    def _read_file_preview(self, file_path: Path) -> str:
-        try:
-            content = file_path.read_text(encoding="utf-8")
-        except Exception as exc:  # pylint: disable=broad-except
-            return f"无法读取文件: {exc}"
-        if len(content) > 3000:
-            return content[:3000] + "\n..."
-        return content
-
-    def goto_screen_layering(self) -> None:
-        if not self.selected_task_path:
-            QMessageBox.warning(self, "提示", "请先选择生产任务单。")
+            QMessageBox.warning(self, "Error", "Image cannot be loaded")
             return
-        self.controller.show_screen("layering")
-
-    @staticmethod
-    def _default_layering_data():
-        return [
-            {
-                "name": "网版A",
-                "aperture": "35 μm",
-                "tension": "24 N",
-                "ink": "白色油墨",
-                "svg": "design_a.svg",
-            },
-            {
-                "name": "网版B",
-                "aperture": "30 μm",
-                "tension": "26 N",
-                "ink": "黑色油墨",
-                "svg": "design_b.svg",
-            },
-            {
-                "name": "网版C",
-                "aperture": "28 μm",
-                "tension": "25 N",
-                "ink": "红色油墨",
-                "svg": "design_c.svg",
-            },
-        ]
-
-    @staticmethod
-    def _default_production_plan() -> str:
-        return (
-            "1. 准备印刷工位和夹具\n"
-            "2. 按订单顺序排产\n"
-            "3. 设置丝印机运行参数\n"
-            "4. 准备对应颜色油墨与刮刀"
-        )
-
-    @staticmethod
-    def _default_quality_plan() -> str:
-        return (
-            "1. 首件外观检测\n"
-            "2. 随机抽检网版完整性\n"
-            "3. 出厂前全检确认"
-        )
+        
+        self.btnStartLayering.setEnabled(True)
+        self.controller.context['work_order'] = work_order.get_content_dict()
+        print(self.controller.context['work_order'])
+    
+    def start_layering(self) -> None:
+        print("Starting layering process...")
+        self.controller.show_page('layer', self.controller.btnLayer)
+    

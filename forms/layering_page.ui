@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>LayeringPage</class>
+    <widget class="QWidget" name="LayeringPage">
+    <layout class="QVBoxLayout" name="verticalLayout_layering">
+        <!-- Canvas: Left SVG Display + Pagination Buttons -->
+        <item stretch="10">
+            <widget class="QWidget" name="layeringCanvas">
+                <layout class="QHBoxLayout" name="canvasLayout">
+                <item>
+                    <widget class="QPushButton" name="prevLayerButton">
+                        <property name="text">
+                            <string>◀</string>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="QLabel" name="svgPreview">
+                        <property name="text">
+                            <string>SVG 预览占位</string>
+                        </property>
+                        <property name="alignment">
+                            <set>Qt::AlignCenter</set>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="QPushButton" name="nextLayerButton">
+                        <property name="text">
+                            <string>▶</string>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="QWidget" name="parametersPanel">
+                        <layout class="QFormLayout" name="paramsForm">
+                            <item row="0" column="0">
+                                <widget class="QLabel" name="labelAperture">
+                                    <property name="text">
+                                        <string>孔径</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item row="0" column="1">
+                                <widget class="QLineEdit" name="apertureLineEdit"/>
+                            </item>
+                            <item row="1" column="0">
+                                <widget class="QLabel" name="labelTension">
+                                    <property name="text">
+                                        <string>张力</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item row="1" column="1">
+                                <widget class="QLineEdit" name="tensionLineEdit"/>
+                            </item>
+                        </layout>
+                    </widget>
+                </item>
+                </layout>
+            </widget>
+        </item>
+
+        <!-- Control Panel -->
+        <item stretch="1">
+            <widget class="QWidget" name="controlBar_layering">
+                <layout class="QHBoxLayout" name="controlLayout_layering">
+                <item>
+                    <widget class="QPushButton" name="editLayerButton">
+                        <property name="text">
+                            <string>编辑网版</string>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="QPushButton" name="startProcessButton">
+                        <property name="text">
+                            <string>开始工艺规划</string>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <spacer name="controlSpacer_layering">
+                    <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                    </property>
+                    </spacer>
+                </item>
+                </layout>
+            </widget>
+        </item>
+    </layout>
+    </widget>
+<resources/>
+<connections/>
+</ui>
