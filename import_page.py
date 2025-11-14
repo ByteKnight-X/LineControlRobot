@@ -98,5 +98,9 @@ class ImportPage(QtWidgets.QWidget):
     
     def start_layering(self) -> None:
         print("Starting layering process...")
-        self.controller.show_page('layer', self.controller.btnLayer)
+        self.controller.context['layering_data'] = [
+            r"resource\layers\8Pro.svg",
+            r"resource\layers\OneItem_1.svg"
+        ]
+        self.controller.show_page('layering_page', self.controller.btnLayering)
     

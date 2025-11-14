@@ -30,13 +30,13 @@
                 </widget>
               </item>
               <item>
-                <widget class="QPushButton" name="btnProcess">
+                <widget class="QPushButton" name="btnProcessPlanning">
                   <property name="text"><string>工艺规划</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
-                <widget class="QPushButton" name="btnPreparation">
+                <widget class="QPushButton" name="btnProductionPreparation">
                   <property name="text"><string>生产准备</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>

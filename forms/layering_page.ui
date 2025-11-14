@@ -13,56 +13,90 @@
                     </sizepolicy>
                 </property>
                 <layout class="QHBoxLayout" name="canvasLayout">
-                <item>
-                    <widget class="QPushButton" name="prevLayerButton">
-                        <property name="text">
-                            <string>◀</string>
-                        </property>
-                    </widget>
-                </item>
-                <item>
-                    <widget class="QLabel" name="svgPreview">
-                        <property name="text">
-                            <string>SVG 预览占位</string>
-                        </property>
-                        <property name="alignment">
-                            <set>Qt::AlignCenter</set>
-                        </property>
-                    </widget>
-                </item>
-                <item>
-                    <widget class="QPushButton" name="nextLayerButton">
-                        <property name="text">
-                            <string>▶</string>
-                        </property>
-                    </widget>
-                </item>
-                <item>
-                    <widget class="QWidget" name="parametersPanel">
-                        <layout class="QFormLayout" name="paramsForm">
-                            <item row="0" column="0">
-                                <widget class="QLabel" name="labelAperture">
-                                    <property name="text">
-                                        <string>孔径</string>
-                                    </property>
-                                </widget>
-                            </item>
-                            <item row="0" column="1">
-                                <widget class="QLineEdit" name="apertureLineEdit"/>
-                            </item>
-                            <item row="1" column="0">
-                                <widget class="QLabel" name="labelTension">
-                                    <property name="text">
-                                        <string>张力</string>
-                                    </property>
-                                </widget>
-                            </item>
-                            <item row="1" column="1">
-                                <widget class="QLineEdit" name="tensionLineEdit"/>
-                            </item>
-                        </layout>
-                    </widget>
-                </item>
+                    <!-- Layering Preview -->
+                    <item stretch="1">
+                        <widget class="QWidget" name="layerPreviewPanel">
+                            <property name="sizePolicy">
+                                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                    <horstretch>1</horstretch>
+                                    <verstretch>1</verstretch>
+                                </sizepolicy>
+                            </property>
+                             <layout class="QVBoxLayout" name="layerPreviewLayout">
+                                <item>
+                                    <widget class="QLabel" name="layerPreview">
+                                        <property name="text">
+                                            <string>Layer Preview Placeholder</string>
+                                        </property>
+                                        <property name="alignment">
+                                            <set>Qt::AlignCenter</set>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item>
+                                    <layout class="QHBoxLayout" name="layerInfoLayout">
+                                        <item>
+                                            <widget class="QPushButton" name="btnPrevLayer">
+                                                <property name="text">
+                                                    <string>◀</string>
+                                                </property>
+                                            </widget>
+                                        </item>
+                                        <item>
+                                            <widget class="QPushButton" name="btnNextLayer">
+                                                <property name="text">
+                                                    <string>▶</string>
+                                                </property>
+                                            </widget>
+                                        </item>
+                                    </layout>
+                                </item>
+                            </layout>
+                        </widget>
+                    </item>
+                    <!-- Parameters Panel -->
+                    <item stretch="1"> 
+                        <widget class="QWidget" name="parametersPanel">
+                            <property name="sizePolicy">
+                                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                    <horstretch>1</horstretch>
+                                    <verstretch>1</verstretch>
+                                </sizepolicy>
+                            </property>
+                             <layout class="QFormLayout" name="paramsForm">
+                                <item row="0" column="0">
+                                    <widget class="QLabel" name="labelAperture">
+                                        <property name="text">
+                                            <string>孔径</string>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="1">
+                                    <widget class="QLineEdit" name="apertureLineEdit"/>
+                                </item>
+                                <item row="1" column="0">
+                                    <widget class="QLabel" name="labelTension">
+                                        <property name="text">
+                                            <string>张力</string>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="1" column="1">
+                                    <widget class="QLineEdit" name="tensionLineEdit"/>
+                                </item>
+                                <item row="2" column="0">
+                                    <widget class="QLabel" name="labelMaterial">
+                                        <property name="text">
+                                            <string>材质</string>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="2" column="1">
+                                    <widget class="QLineEdit" name="materialLineEdit"/>
+                                </item>
+                            </layout>
+                        </widget>
+                    </item>
                 </layout>
             </widget>
         </item>
@@ -84,25 +118,18 @@
                 </property>
                 <layout class="QHBoxLayout" name="controlLayout_layering">
                 <item>
-                    <widget class="QPushButton" name="editLayerButton">
+                    <widget class="QPushButton" name="btnEditLayer">
                         <property name="text">
                             <string>编辑网版</string>
                         </property>
                     </widget>
                 </item>
                 <item>
-                    <widget class="QPushButton" name="startProcessButton">
+                    <widget class="QPushButton" name="btnStartProcessPlanning">
                         <property name="text">
                             <string>开始工艺规划</string>
                         </property>
                     </widget>
-                </item>
-                <item>
-                    <spacer name="controlSpacer_layering">
-                    <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                    </property>
-                    </spacer>
                 </item>
                 </layout>
             </widget>

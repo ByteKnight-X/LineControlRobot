@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+<class>ProcessPlanningWidget</class>
+    <widget class="QWidget" name="ProcessPlanningWidget">
+        <layout class="QVBoxLayout" name="processMainLayout">
+            <item stretch="10">
+                <layout class="QHBoxLayout" name="topRowLayout">
+                <!-- Left: Production panel -->
+                    <item stretch="1">
+                        <widget class="QWidget" name="productionPanel">
+                        <layout class="QVBoxLayout" name="prodLayout">
+                            <item>
+                                <widget class="QLabel" name="prodLabel">
+                                    <property name="text"><string>生产清单</string></property>
+                                </widget>
+                            </item>
+                        <item>
+                            <widget class="QTextEdit" name="productionListTextEdit">
+                                <property name="sizePolicy">
+                                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                        <horstretch>1</horstretch>
+                                        <verstretch>1</verstretch>
+                                    </sizepolicy>
+                                </property>
+                            </widget>
+                        </item>
+                        </layout>
+                    </widget>
+                </item>
+
+        <!-- Right: Quality panel -->
+        <item stretch="1">
+          <widget class="QWidget" name="qualityPanel">
+            <layout class="QVBoxLayout" name="qualLayout">
+              <item>
+                <widget class="QLabel" name="qualLabel">
+                  <property name="text"><string>质检清单</string></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QTextEdit" name="qualityListTextEdit">
+                  <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>1</horstretch>
+                      <verstretch>1</verstretch>
+                    </sizepolicy>
+                  </property>
+                </widget>
+              </item>
+            </layout>
+          </widget>
+        </item>
+      </layout>
+    </item>
+
+    <!-- Control Panel -->
+    <item stretch="1">
+      <widget class="QWidget" name="controlBar_process">
+        <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+          </sizepolicy>
+        </property>
+        <property name="maximumSize">
+          <size>
+            <width>16777215</width>
+            <height>80</height>
+          </size>
+        </property>
+        <layout class="QHBoxLayout" name="controlLayout_process">
+          <item>
+            <widget class="QPushButton" name="btnEditProduction">
+              <property name="text"><string>编辑生产清单</string></property>
+            </widget>
+          </item>
+          <item>
+            <widget class="QPushButton" name="btnEditQuality">
+              <property name="text"><string>编辑质检清单</string></property>
+            </widget>
+          </item>
+          <item>
+            <widget class="QPushButton" name="btnStartProductionPreparation">
+              <property name="text"><string>开始生产</string></property>
+            </widget>
+          </item>
+        </layout>
+      </widget>
+    </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
