@@ -6,29 +6,49 @@
             <!-- Info Panel -->
             <item stretch="10">
                 <layout class="QHBoxLayout" name="topImportLayout">
-                    <item>
-                        <widget class="QTextEdit" name="txtInstructions">
+                    <item stretch="1">
+                        <widget class="QScrollArea" name="instructionsScroll">
                             <property name="styleSheet">
-                                <string>border: 1px solid #888888;</string>
+                                <string>border: 1px solid #888888; background-color: white;</string>
                             </property>
+                            <property name="widgetResizable">
+                                <bool>true</bool>
+                            </property>
+                            <!-- ensure the scroll area itself expands both directions -->
                             <property name="sizePolicy">
                                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                                     <horstretch>1</horstretch>
                                     <verstretch>1</verstretch>
                                 </sizepolicy>
                             </property>
+                            <widget class="QWidget" name="instructionsWidget">
+                                <!-- make the inner widget also Expanding so QScrollArea reports a large sizeHint -->
+                                <property name="sizePolicy">
+                                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                        <horstretch>1</horstretch>
+                                        <verstretch>1</verstretch>
+                                    </sizepolicy>
+                                </property>
+                                <layout class="QFormLayout" name="instructionsFormLayout"/>
+                            </widget>
                         </widget>
                     </item>
-                    <item>
+
+                    <item stretch="1">
                         <widget class="QLabel" name="patternDesign">
                             <property name="styleSheet">
                                 <string>border: 1px solid #888888; background-color: white;</string>
                             </property>
+                            <!-- make the label explicitly Expanding with same stretch factors -->
                             <property name="sizePolicy">
                                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                                     <horstretch>1</horstretch>
                                     <verstretch>1</verstretch>
                                 </sizepolicy>
+                            </property>
+                            <!-- optional: allow label to scale contents when pixmap set -->
+                            <property name="scaledContents">
+                                <bool>false</bool>
                             </property>
                         </widget>
                     </item>
@@ -46,7 +66,7 @@
                         </item>
                         <item>
                             <widget class="QPushButton" name="btnStartLayering">
-                                <property name="text"><string>开始网版设计</string></property>
+                                <property name="text"><string>下一步</string></property>
                                 <property name="enabled"><bool>false</bool></property>
                             </widget>
                         </item>

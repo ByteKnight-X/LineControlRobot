@@ -9,7 +9,6 @@ from routine_page import RoutinePage
 from preparation_page import PreparationPage
 
 
-
 class MainWindow(QtWidgets.QMainWindow):
     """Main application window that manages different screens."""
 
@@ -25,8 +24,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btnImport.clicked.connect(lambda: self.show_page('import_page', self.btnImport))
         self.btnLayering.clicked.connect(lambda: self.show_page('layering_page', self.btnLayering))
         self.btnRoutine.clicked.connect(lambda: self.show_page('routine_page', self.btnRoutine))
-        self.btnPreparation.clicked.connect(lambda: self.show_page('preparation_page', self.btnPreparation))
-        
+        self.btnMonitoring.clicked.connect(lambda: self.show_page('monitoring_page', self.btnMonitoring))
+        self.btnEvaluation.clicked.connect(lambda: self.show_page('evaluation_page', self.btnEvaluation))
+
         self.show_page('import_page', self.btnImport)
         
                 
@@ -39,8 +39,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 page = LayeringPage(controller=self)
             elif page_name == 'routine_page':
                 page = RoutinePage(controller=self)
-            elif page_name == 'preparation_page':
-                page = PreparationPage(controller=self)
+            elif page_name == 'monitoring_page':
+                pass  # To be implemented
+            elif page_name == 'evaluation_page':
+                pass  # To be implemented
             else:
                 return
             self.stackedRight.addWidget(page)
@@ -48,7 +50,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stackedRight.setCurrentWidget(self.pages[page_name])
 
         # Update left-side button highlight
-        for b in (self.btnImport, self.btnLayering, self.btnRoutine, self.btnPreparation):
+        for b in (self.btnImport, self.btnLayering, self.btnRoutine, self.btnMonitoring, self.btnEvaluation):
             b.setStyleSheet('font-weight: normal;')
         btn.setStyleSheet('font-weight: bold;')
 
