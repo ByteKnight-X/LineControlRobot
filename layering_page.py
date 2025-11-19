@@ -24,7 +24,7 @@ class LayeringPage(QtWidgets.QWidget):
         self.btnPrevLayer.clicked.connect(self.show_previous)
         self.btnNextLayer.clicked.connect(self.show_next)
         self.btnStartProcessPlanning.clicked.connect(
-                lambda: self.controller.show_page("process_planning_page", self.controller.btnProcessPlanning)
+                lambda: self.controller.show_page("routine_page", self.controller.btnRoutine)
             )
         
     def refresh_display(self) -> None:

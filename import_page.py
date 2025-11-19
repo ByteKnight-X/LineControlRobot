@@ -56,7 +56,6 @@ class ImportPage(QtWidgets.QWidget):
         self.controller = controller
         self.setup_ui()
 
-
     def setup_ui(self) -> None:
         self.btnSelectTask.clicked.connect(self.open_task_file)
         self.btnStartLayering.clicked.connect(self.start_layering)
@@ -95,9 +94,9 @@ class ImportPage(QtWidgets.QWidget):
         self.btnStartLayering.setEnabled(True)
         self.controller.context['work_order'] = work_order.get_content_dict()
         print(self.controller.context['work_order'])
-    
+
     def start_layering(self) -> None:
-        print("Starting layering process...")
+        print("Starting layering...")
         self.controller.context['layering_data'] = [
             r"resource\layers\8Pro.svg",
             r"resource\layers\OneItem_1.svg"

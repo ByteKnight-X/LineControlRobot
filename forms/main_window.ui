@@ -19,24 +19,24 @@
             <layout class="QVBoxLayout" name="btnLayout">
               <item>
                 <widget class="QPushButton" name="btnImport">
-                  <property name="text"><string>导入指令</string></property>
+                  <property name="text"><string>导入任务</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
                 <widget class="QPushButton" name="btnLayering">
-                  <property name="text"><string>网版分层</string></property>
+                  <property name="text"><string>网版设计</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
-                <widget class="QPushButton" name="btnProcessPlanning">
-                  <property name="text"><string>工艺规划</string></property>
+                <widget class="QPushButton" name="btnRoutine">
+                  <property name="text"><string>工艺路线</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
-                <widget class="QPushButton" name="btnProductionPreparation">
+                <widget class="QPushButton" name="btnPreparation">
                   <property name="text"><string>生产准备</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
