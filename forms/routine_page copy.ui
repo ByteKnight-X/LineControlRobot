@@ -7,15 +7,15 @@
         <layout class="QHBoxLayout" name="topRowLayout">
           <!-- Single large text edit for production/quality lists -->
           <item stretch="1">
-            <widget class="QGraphicsView" name="flowGraphicsView">
+            <widget class="QTextEdit" name="productionListTextEdit">
               <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>1</horstretch>
                   <verstretch>1</verstretch>
                 </sizepolicy>
               </property>
-              <property name="styleSheet">
-                <string>background-color: white; border:1px solid #ccc;</string>
+              <property name="placeholderText">
+                <string>生产清单和质检清单内容...</string>
               </property>
             </widget>
           </item>
@@ -39,18 +39,8 @@
         </property>
         <layout class="QHBoxLayout" name="controlLayout_process">
           <item>
-            <widget class="QPushButton" name="btnMeshPreparation">
-              <property name="text"><string>网版准备</string></property>
-            </widget>
-          </item>
-          <item>
-            <widget class="QPushButton" name="btnInkPreparation">
-              <property name="text"><string>胶浆油墨准备</string></property>
-            </widget>
-          </item>
-          <item>
-            <widget class="QPushButton" name="btnFabricPreparation">
-              <property name="text"><string>面料准备</string></property>
+            <widget class="QPushButton" name="btnEditProduction">
+              <property name="text"><string>编辑清单</string></property>
             </widget>
           </item>
           <item>
