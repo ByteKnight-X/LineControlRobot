@@ -12,10 +12,10 @@ class LayeringPage(QtWidgets.QWidget):
         super().__init__()
         uic.loadUi("forms/layering_page.ui", self)
         self.controller = controller
-        # self.layer_data = controller.context.get("layering_data", [])
-        # self.current_index = 0
-        # self.setup_ui()
-        # self.refresh_display()
+        self.layer_data = controller.context.get("layering_data", [])
+        self.current_index = 0
+        #self.setup_ui()
+        self.refresh_display()
 
     def setup_ui(self):
         """

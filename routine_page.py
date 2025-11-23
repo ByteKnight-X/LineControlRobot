@@ -5,6 +5,45 @@ from PyQt5.QtCore import QRectF, QPointF, Qt
 from utilities.constants import DEFAULT_ROUTINE_LISTS
 
 
+# simple Node item (rect with text)
+class NodeItem(QGraphicsRectItem):
+    def __init__(self, rect: QRectF, text: str):
+        super().__init__(rect)
+        self.node_text = text  # 保存节点文本
+        # 更醒目的填充色和圆角
+        self.setBrush(QBrush(QColor("#4A90E2")))  # 蓝色背景
+        self.setPen(QPen(QColor("#1A3D6D"), 3))   # 深蓝描边，线宽3
+        self.setRect(rect)
+        self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
+
+        # 圆角绘制（重写 paint 方法）
+        self.round_radius = 24
+
+        # 美观的文本
+        txt = QGraphicsSimpleTextItem(text, self)
+        font = txt.font()
+        font.setPointSize(24)
+        font.setBold(True)
+        txt.setFont(font)
+        txt.setBrush(QBrush(QColor("#fff")))  # 白色字体
+        txt_rect = txt.boundingRect()
+        txt.setPos(rect.x() + (rect.width() - txt_rect.width())/2,
+                   rect.y() + (rect.height() - txt_rect.height())/2)
+
+    def paint(self, painter, option, widget=None):
+        # 绘制圆角矩形
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(self.brush())
+        painter.setPen(self.pen())
+        painter.drawRoundedRect(self.rect(), self.round_radius, self.round_radius)
+
+    def mousePressEvent(self, ev):
+        print("Clicked node:", self.node_text)
+        QtWidgets.QMessageBox.information(None, "节点", f"你点击了节点: {self.node_text}")
+        super().mousePressEvent(ev)
+
+
 class RoutinePage(QtWidgets.QWidget):
     """Routine page."""
 
@@ -12,34 +51,17 @@ class RoutinePage(QtWidgets.QWidget):
         super().__init__()
         uic.loadUi("forms/routine_page.ui", self)
         self.controller = controller
-        self.setup_ui_v1()
+        self.setup_ui()
     
-    def setup_ui_v1(self) -> None:
+    def setup_ui(self) -> None:
         """Initialize a simple flow A -> B inside flowGraphicsView (QGraphicsView)."""
         # create scene and attach to view
         scene = QGraphicsScene(self)
         self.flowGraphicsView.setScene(scene)
         self.flowGraphicsView.setRenderHint(QPainter.Antialiasing)
 
-        # simple Node item (rect with text)
-        class NodeItem(QGraphicsRectItem):
-            def __init__(self, rect: QRectF, text: str):
-                super().__init__(rect)
-                self.setBrush(QBrush(QColor("#f7f7f7")))
-                self.setPen(QPen(QColor("#555"), 1.2))
-                txt = QGraphicsSimpleTextItem(text, self)
-                # center text roughly
-                txt_rect = txt.boundingRect()
-                txt.setPos(rect.x() + (rect.width() - txt_rect.width())/2,
-                           rect.y() + (rect.height() - txt_rect.height())/2)
-                self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
-
-            def mousePressEvent(self, ev):
-                QtWidgets.QMessageBox.information(None, "Node", "Clicked node")
-                super().mousePressEvent(ev)
-
         # positions and sizes (scale up 5x and ensure gap so nodes don't overlap)
-        scale = 5.0
+        scale = 0.5
         base_w, base_h = 140 * 3, 48 * 3
         a_rect = QRectF(0, 0, base_w * scale, base_h * scale)
         # gap between nodes (scaled) to avoid overlap
@@ -74,4 +96,4 @@ class RoutinePage(QtWidgets.QWidget):
         # adjust view
         bbox = scene.itemsBoundingRect().adjusted(-20, -20, 20, 20)
         scene.setSceneRect(bbox)
-        self.flowGraphicsView.fitInView(bbox, Qt.KeepAspectRatio)
+        # self.flowGraphicsView.fitInView(bbox, Qt.KeepAspectRatio)

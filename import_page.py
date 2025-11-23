@@ -56,16 +56,56 @@ class ImportPage(QtWidgets.QWidget):
         self.controller = controller
         self.setup_ui()
 
+
     def setup_ui(self) -> None:
         self.btnSelectTask.clicked.connect(self.open_task_file)
-        self.btnStartLayering.clicked.connect(self.start_layering)
-        self.btnStartLayering.setEnabled(False)
+        self.btnNextStep.clicked.connect(self.start_layering)
+        self.btnNextStep.setEnabled(False)
 
-    def _clear_form_layout(self, form_layout: 'QFormLayout') -> None:
-        """Remove all rows from QFormLayout."""
-        # QFormLayout exposes rowCount in PyQt
-        while form_layout.rowCount():
-            form_layout.removeRow(0)
+        # 编辑/保存按钮状态
+        self._is_editing = False
+        self.btnEditTask.setText("编辑任务单")
+        self.btnEditTask.clicked.connect(self.toggle_edit_mode)
+
+    
+    def toggle_edit_mode(self) -> None:
+        self._is_editing = not self._is_editing
+        # 切换所有 QLineEdit 的只读状态
+        form_layout = self.instructionsWidget.layout()
+        for i in range(form_layout.rowCount()):
+            field = form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole)
+            if field is not None:
+                widget = field.widget()
+                if isinstance(widget, QtWidgets.QLineEdit):
+                    widget.setReadOnly(not self._is_editing)
+        # 切换按钮文本
+        if self._is_editing:
+            self.btnEditTask.setText("保存任务单")
+        else:
+            self.btnEditTask.setText("编辑任务单")
+
+
+    def _clear_form_layout(self, form_layout) -> None:
+        """Remove all rows/items from a layout (works for QFormLayout and generic QLayout)."""
+        # QFormLayout 支持 rowCount/removeRow
+        if hasattr(form_layout, "rowCount"):
+            while form_layout.rowCount():
+                form_layout.removeRow(0)
+            return
+
+        # 通用 QLayout 清理逻辑
+        while form_layout.count():
+            item = form_layout.takeAt(0)
+            if item is None:
+                continue
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+            child_layout = item.layout()
+            if child_layout is not None:
+                self._clear_form_layout(child_layout)
+
 
     def _populate_instructions_form(self, content: dict) -> None:
         """Populate the scroll area's form layout with key/value pairs and apply simple styling."""
@@ -75,31 +115,31 @@ class ImportPage(QtWidgets.QWidget):
 
         # layout spacing for cleaner look
         try:
-            form_layout.setHorizontalSpacing(12)
+            form_layout.setHorizontalSpacing(4)   # 缩小 label 与 value 的水平间距
             form_layout.setVerticalSpacing(8)
         except Exception:
             pass
         # small inner margin for the container widget
-        self.instructionsWidget.setContentsMargins(6, 6, 6, 6)
+        self.instructionsWidget.setContentsMargins(2, 6, 6, 6)
 
         for key, value in content.items():
             # name label: centered, no border
             name_lbl = QtWidgets.QLabel(f"{key.capitalize()}")
-            name_lbl.setMinimumWidth(120)
-            name_lbl.setAlignment(Qt.AlignCenter)  # center text
-            name_lbl.setStyleSheet("border: none; font-weight: 600; padding: 6px;")
-            name_lbl.setContentsMargins(0, 0, 0, 0)
+            name_lbl.setMinimumWidth(80)
+            name_lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  
+            name_lbl.setStyleSheet("border: none; font-size: 12px; font-weight: 600; padding: 0 2px;")
 
             # value editor: single-line editable control, initially read-only, max 80 chars
             val_edit = QtWidgets.QLineEdit(value if value is not None else "")
-            val_edit.setMaxLength(80)                # 限制不超过80字符
-            val_edit.setReadOnly(True)               # 初始不可编辑
-            val_edit.setFrame(False)                 # 去掉内置边框（更简洁）
-            val_edit.setStyleSheet("background: transparent; padding: 6px;")
-            val_edit.setToolTip(value if value is not None else "")  # 全文可见于提示
-            val_edit.setMinimumWidth(200)
+            val_edit.setMaxLength(80)                
+            val_edit.setReadOnly(True)               
+            val_edit.setFrame(False)                 
+            val_edit.setStyleSheet("background: transparent; font-size: 12px; padding: 0 2px;")
+            # val_edit.setToolTip(value if value is not None else "")
+            val_edit.setMinimumWidth(80)
 
             form_layout.addRow(name_lbl, val_edit)
+
 
     def open_task_file(self) -> None:
         # Open file dialog to select task file
@@ -141,14 +181,23 @@ class ImportPage(QtWidgets.QWidget):
             QMessageBox.warning(self, "Error", "Image cannot be loaded")
             return
         
-        self.btnStartLayering.setEnabled(True)
+        self.btnNextStep.setEnabled(True)
         self.controller.context['work_order'] = work_order.get_content_dict()
         print(self.controller.context['work_order'])
 
     def start_layering(self) -> None:
         print("Starting layering...")
-        self.controller.context['layering_data'] = [
-            r"resource\layers\8Pro.svg",
-            r"resource\layers\OneItem_1.svg"
+        pdf_paths = [
+            r"resource\layers\8Pro_1.pdf",
+            r"resource\layers\OneItem_1.pdf"
         ]
+        pdf_contents = []
+        for path in pdf_paths:
+            try:
+                with open(path, "rb") as f:
+                    pdf_contents.append(f.read())
+            except Exception as e:
+                print(f"Failed to read {path}: {e}")
+                pdf_contents.append(None)
+        self.controller.context['layering_data'] = pdf_contents
         self.controller.show_page('layering_page', self.controller.btnLayering)

@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>LayeringPage</class>
+    <widget class="QWidget" name="LayeringPage">
+    <layout class="QVBoxLayout" name="verticalLayout_layering">
+        <!-- Canvas: Left SVG Display + Pagination Buttons -->
+        <item stretch="10">
+            <widget class="QWidget" name="layeringCanvas">
+                <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                        <horstretch>1</horstretch>
+                        <verstretch>1</verstretch>
+                    </sizepolicy>
+                </property>
+                <layout class="QHBoxLayout" name="canvasLayout">
+                    <!-- Mesh Preview -->
+                    <item stretch="2">
+                        <widget class="QWidget" name="leftPreviewContainer">
+                            <property name="sizePolicy">
+                                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                    <horstretch>2</horstretch>
+                                    <verstretch>1</verstretch>
+                                </sizepolicy>
+                            </property>
+                            <layout class="QVBoxLayout" name="leftPreviewLayout">
+                                <!-- Top: large SVG preview (stretch 8) -->
+                                <item stretch="8">
+                                    <widget class="QWidget" name="layerPreviewPanel">
+                                        <property name="sizePolicy">
+                                            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                                <horstretch>2</horstretch>
+                                                <verstretch>1</verstretch>
+                                            </sizepolicy>
+                                        </property>
+                                        <layout class="QVBoxLayout" name="layerPreviewInnerLayout">
+                                            <item>
+                                                <widget class="QLabel" name="layerPreview">
+                                                    <property name="sizePolicy">
+                                                        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                                            <horstretch>2</horstretch>
+                                                            <verstretch>1</verstretch>
+                                                        </sizepolicy>
+                                                    </property>
+                                                    <property name="text">
+                                                        <string>Layer Preview Placeholder</string>
+                                                    </property>
+                                                    <property name="alignment">
+                                                        <set>Qt::AlignCenter</set>
+                                                    </property>
+                                                    <property name="styleSheet">
+                                                        <string>border:1px solid #888888; background-color: white;</string>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                        </layout>
+                                    </widget>
+                                </item>
+
+                                <!-- Bottom: navigation (stretch 1) -->
+                                <item stretch="1">
+                                    <widget class="QWidget" name="previewNavPanel">
+                                        <property name="sizePolicy">
+                                            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                                                <horstretch>2</horstretch>
+                                                <verstretch>0</verstretch>
+                                            </sizepolicy>
+                                        </property>
+                                        <layout class="QHBoxLayout" name="previewNavLayout">
+                                            <item>
+                                                <widget class="QPushButton" name="btnPrevLayer">
+                                                    <property name="text"><string>&lt;</string></property>
+                                                    <property name="sizePolicy">
+                                                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                                            <horstretch>0</horstretch>
+                                                            <verstretch>0</verstretch>
+                                                        </sizepolicy>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                            <item>
+                                                <spacer name="navLeftSpacer">
+                                                    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                                                    <property name="sizeType"><enum>QSizePolicy::Expanding</enum></property>
+                                                </spacer>
+                                            </item>
+                                            <item>
+                                                <widget class="QLabel" name="layerIndexLabel">
+                                                    <property name="text"><string>0 / 0</string></property>
+                                                    <property name="alignment"><set>Qt::AlignCenter</set></property>
+                                                    <property name="minimumSize"><size><width>90</width><height>24</height></size></property>
+                                                </widget>
+                                            </item>
+                                            <item>
+                                                <spacer name="navRightSpacer">
+                                                    <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                                                    <property name="sizeType"><enum>QSizePolicy::Expanding</enum></property>
+                                                </spacer>
+                                            </item>
+                                            <item>
+                                                <widget class="QPushButton" name="btnNextLayer">
+                                                    <property name="text"><string>&gt;</string></property>
+                                                    <property name="sizePolicy">
+                                                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                                                            <horstretch>0</horstretch>
+                                                            <verstretch>0</verstretch>
+                                                        </sizepolicy>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                        </layout>
+                                    </widget>
+                                </item>
+                            </layout>
+                        </widget>
+                    </item>
+
+                    <!-- Right: Mesh Info (stretch 1) -->
+                    <item stretch="1">
+                        <widget class="QWidget" name="rightPanel">
+                            <property name="sizePolicy">
+                                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                    <horstretch>1</horstretch>
+                                    <verstretch>1</verstretch>
+                                </sizepolicy>
+                            </property>
+                            <layout class="QVBoxLayout" name="rightPanelLayout">
+                                <!-- Top: parameters -->
+                                <item stretch="1">
+                                    <widget class="QWidget" name="parametersPanel">
+                                        <property name="sizePolicy">
+                                            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                                <horstretch>1</horstretch>
+                                                <verstretch>1</verstretch>
+                                            </sizepolicy>
+                                        </property>
+                                        <layout class="QFormLayout" name="paramsForm">
+                                            <item row="0" column="0">
+                                                <widget class="QLabel" name="layerID">
+                                                    <property name="sizePolicy">
+                                                        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                                                            <horstretch>0</horstretch>
+                                                            <verstretch>0</verstretch>
+                                                        </sizepolicy>
+                                                    </property>
+                                                    <property name="text"><string>网版ID</string></property>
+                                                </widget>
+                                            </item>
+                                            <item row="0" column="1">
+                                                <widget class="QLineEdit" name="idLineEdit">
+                                                    <property name="sizePolicy">
+                                                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                                                            <horstretch>1</horstretch>
+                                                            <verstretch>0</verstretch>
+                                                        </sizepolicy>
+                                                    </property>
+                                                </widget>
+                                            </item>
+                                            <item row="1" column="0">
+                                                <widget class="QLabel" name="labelTension">
+                                                    <property name="text"><string>张力</string></property>
+                                                </widget>
+                                            </item>
+                                            <item row="1" column="1">
+                                                <widget class="QLineEdit" name="tensionLineEdit"/>
+                                            </item>
+                                            <item row="2" column="0">
+                                                <widget class="QLabel" name="labelMeshCount">
+                                                    <property name="text"><string>目数</string></property>
+                                                </widget>
+                                            </item>
+                                            <item row="2" column="1">
+                                                <widget class="QLineEdit" name="meshCountLineEdit"/>
+                                            </item>
+                                            <item row="3" column="0">
+                                                <widget class="QLabel" name="labelPhotoresistThickness">
+                                                    <property name="text"><string>感光胶厚度</string></property>
+                                                </widget>
+                                            </item>
+                                            <item row="3" column="1">
+                                                <widget class="QLineEdit" name="photoresistThicknessLineEdit"/>
+                                            </item>
+                                            <item row="4" column="0">
+                                                <widget class="QLabel" name="labelWireDiameter">
+                                                    <property name="text"><string>线径</string></property>
+                                                </widget>
+                                            </item>
+                                            <item row="4" column="1">
+                                                <widget class="QLineEdit" name="wireDiameterLineEdit"/>
+                                            </item>
+                                        </layout>
+                                    </widget>
+                                </item>
+
+                                <!-- Bottom: Summary Info -->
+                                <item stretch="1">
+                                    <widget class="QTextEdit" name="thumbnailsText">
+                                        <property name="sizePolicy">
+                                            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                                <horstretch>1</horstretch>
+                                                <verstretch>1</verstretch>
+                                            </sizepolicy>
+                                        </property>
+                                        <property name="readOnly">
+                                            <bool>true</bool>
+                                        </property>
+                                        <property name="placeholderText">
+                                            <string>Summary Info Place holder</string>
+                                        </property>
+                                    </widget>
+                                </item>
+                            </layout>
+                        </widget>
+                    </item>
+                </layout>
+            </widget>
+        </item>
+
+        <!-- Control Panel -->
+        <item stretch="1">
+            <widget class="QWidget" name="controlBar_layering">
+                <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                    </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                    <size>
+                        <width>16777215</width>
+                        <height>80</height>
+                    </size>
+                </property>
+                <layout class="QHBoxLayout" name="controlLayout_layering">
+                <item>
+                    <widget class="QPushButton" name="btnEditLayer">
+                        <property name="text">
+                            <string>编辑网版</string>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="QPushButton" name="btnStartProcessPlanning">
+                        <property name="text">
+                            <string>开始工艺规划</string>
+                        </property>
+                    </widget>
+                </item>
+                </layout>
+            </widget>
+        </item>
+    </layout>
+    </widget>
+<resources/>
+<connections/>
+</ui>
