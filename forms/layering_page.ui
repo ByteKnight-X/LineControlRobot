@@ -66,14 +66,13 @@
          <widget class="QWidget" name="layerPreviewPanel">
           <layout class="QVBoxLayout" name="layerPreviewInnerLayout">
            <item>
-            <widget class="QLabel" name="layerPreview">
+            <!-- layerPreview rewritten as QWebEngineView to render SVG reliably -->
+            <widget class="QWebEngineView" name="layerPreview">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch><verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="text"><string>网版预览</string></property>
-             <property name="alignment"><set>Qt::AlignCenter</set></property>
              <property name="styleSheet">
               <string>border:1px solid #888888; background-color:white;</string>
              </property>
@@ -123,7 +122,7 @@
       </widget>
      </item>
      <!-- Parameters panel -->
-     <item stretch="1">
+     <item stretch="2">
       <widget class="QWidget" name="rightPanel">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -134,7 +133,7 @@
         <number>160</number>
        </property>
        <property name="maximumWidth">
-        <number>260</number>
+        <number>400</number>
        </property>
        <layout class="QVBoxLayout" name="rightPanelLayout">
         <item>
@@ -218,16 +217,21 @@
            <item row="8" column="1">
             <widget class="QLineEdit" name="frameRigidityLineEdit"/>
            </item>
+           <item row="9" column="0">
+           <widget class="QPushButton" name="btnEditParams">
+            <property name="text"><string>编辑参数</string></property>
+           </widget>
+          </item>
+           <item row="9" column="1">
+           <widget class="QPushButton" name="btnSaveParams">
+            <property name="text"><string>保存参数</string></property>
+           </widget>
+          </item>
           </layout>
          </widget>
         </item>
         <item>
          <layout class="QVBoxLayout" name="paramsButtonsLayout">
-          <item>
-           <widget class="QPushButton" name="btnSaveParams">
-            <property name="text"><string>保存参数</string></property>
-           </widget>
-          </item>
           <item>
            <widget class="QPushButton" name="btnStartProcessPlanning">
             <property name="text"><string>下一步</string></property>
@@ -248,6 +252,14 @@
    </item>
   </layout>
  </widget>
+
+ <customwidgets>
+  <customwidget class="QWebEngineView" name="QWebEngineView">
+   <header>PyQt5.QtWebEngineWidgets</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+
  <resources/>
  <connections/>
 </ui>

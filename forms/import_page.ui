@@ -50,13 +50,11 @@
      <layout class="QVBoxLayout" name="designVerticalLayout">
       <!-- 上栏: SVG预览 (stretch 10) -->
       <item stretch="10">
-       <widget class="QLabel" name="patternDesign">
+       <!-- patternDesign changed from QLabel to QWebEngineView -->
+       <widget class="QWebEngineView" name="patternDesign">
         <property name="styleSheet">
          <string>border:1px solid #888888; background-color:white;</string>
         </property>
-        <property name="alignment"><set>Qt::AlignCenter</set></property>
-        <property name="scaledContents"><bool>false</bool></property>
-        <property name="text"><string/></property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch><verstretch>0</verstretch>
@@ -85,6 +83,12 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget class="QWebEngineView" name="QWebEngineView">
+   <header>PyQt5.QtWebEngineWidgets</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

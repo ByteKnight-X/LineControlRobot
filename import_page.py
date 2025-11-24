@@ -4,7 +4,9 @@ from xml.etree import ElementTree as ET
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QByteArray, QUrl
+from PyQt5.QtWebEngineWidgets import QWebEngineView   # added
+from PyQt5.QtSvg import QSvgWidget  # (kept if still used elsewhere)
 import os
 
 
@@ -33,7 +35,6 @@ class WorkOrder:
             text = (elem.text or "").strip()
             self.__content_dict[tag] = text
             lines.append(f"{tag.capitalize()}: {text}\n")
-            print(f"{tag.capitalize()}: {text}")
         self.__content_str = "".join(lines)
     
     def get_content_dict(self) -> dict:
@@ -66,6 +67,8 @@ class ImportPage(QtWidgets.QWidget):
         self._is_editing = False
         self.btnEditTask.setText("编辑任务单")
         self.btnEditTask.clicked.connect(self.toggle_edit_mode)
+        # patternDesign is QWebEngineView now
+        self.patternDesign.setContextMenuPolicy(Qt.NoContextMenu)
 
     
     def toggle_edit_mode(self) -> None:
@@ -141,6 +144,18 @@ class ImportPage(QtWidgets.QWidget):
             form_layout.addRow(name_lbl, val_edit)
 
 
+    def _load_svg_into_pattern_design(self, svg_path: str) -> bool:
+        if not svg_path.lower().endswith(".svg"):
+            QMessageBox.warning(self, "格式错误", "仅支持SVG文件。")
+            return False
+        if not os.path.exists(svg_path):
+            QMessageBox.warning(self, "缺失文件", f"SVG不存在:\n{svg_path}")
+            return False
+        # Use QWebEngineView to load local file (better filter/mask support)
+        self.patternDesign.load(QUrl.fromLocalFile(os.path.abspath(svg_path)))
+        return True
+
+
     def open_task_file(self) -> None:
         # Open file dialog to select task file
         task_file_path, _ = QFileDialog.getOpenFileName(self, "选择生产任务单", "", "XML Files (*.xml)")
@@ -165,20 +180,7 @@ class ImportPage(QtWidgets.QWidget):
         # Load design pattern
         pattern_design_path = work_order.get_content_dict().get("图案设计", "")
         pattern_design_path = pattern_design_path.strip().strip('"')
-        if not os.path.exists(pattern_design_path):
-            QMessageBox.warning(self, "", f"设计文档不存在:\n{pattern_design_path}")
-            return
-        pixmap = QPixmap(pattern_design_path)
-        if not pixmap.isNull():
-            self.patternDesign.setPixmap(
-                pixmap.scaled(
-                    self.patternDesign.size(),
-                    aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio,
-                    transformMode=Qt.TransformationMode.SmoothTransformation
-                )
-            )
-        else:
-            QMessageBox.warning(self, "Error", "Image cannot be loaded")
+        if not self._load_svg_into_pattern_design(pattern_design_path):
             return
         
         self.btnNextStep.setEnabled(True)
@@ -187,17 +189,8 @@ class ImportPage(QtWidgets.QWidget):
 
     def start_layering(self) -> None:
         print("Starting layering...")
-        pdf_paths = [
-            r"resource\layers\8Pro_1.pdf",
-            r"resource\layers\OneItem_1.pdf"
+        self.controller.context['layering_data'] = [
+            "resource\\layers\\8Pro.svg", 
+            "resource\\layers\\OneItem_1.svg"
         ]
-        pdf_contents = []
-        for path in pdf_paths:
-            try:
-                with open(path, "rb") as f:
-                    pdf_contents.append(f.read())
-            except Exception as e:
-                print(f"Failed to read {path}: {e}")
-                pdf_contents.append(None)
-        self.controller.context['layering_data'] = pdf_contents
         self.controller.show_page('layering_page', self.controller.btnLayering)
