@@ -30,6 +30,13 @@ class NodeItem(QGraphicsRectItem):
         txt.setPos(rect.x() + (rect.width() - txt_rect.width())/2,
                    rect.y() + (rect.height() - txt_rect.height())/2)
 
+        # Ensure the text item does NOT consume mouse events so clicks go to the parent NodeItem
+        txt.setAcceptedMouseButtons(Qt.NoButton)
+        txt.setAcceptHoverEvents(False)
+
+        # make sure parent item can still receive mouse events
+        self.setAcceptHoverEvents(True)
+
     def paint(self, painter, option, widget=None):
         # 绘制圆角矩形
         painter.setRenderHint(QPainter.Antialiasing)
