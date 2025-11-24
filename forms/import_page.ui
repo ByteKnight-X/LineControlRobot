@@ -3,11 +3,11 @@
  <class>ImportPage</class>
  <widget class="QWidget" name="ImportPage">
   <layout class="QHBoxLayout" name="mainHorizontalLayout">
-   <!-- 任务书编辑栏 (left, stretch = 1) -->
+   <!-- Task editor panel (left, stretch = 1) -->
    <item stretch="1">
     <widget class="QWidget" name="taskPanel">
      <layout class="QVBoxLayout" name="taskVerticalLayout">
-      <!-- 上栏: 可滚动文本框  (stretch 10) -->
+      <!-- Top: scrollable text area (stretch 10) -->
       <item stretch="10">
        <widget class="QScrollArea" name="instructionsScroll">
         <property name="widgetResizable"><bool>true</bool></property>
@@ -24,7 +24,7 @@
         </widget>
        </widget>
       </item>
-      <!-- 下栏: 按钮 (stretch 1) -->
+      <!-- Bottom: buttons (stretch 1) -->
       <item stretch="1">
        <layout class="QHBoxLayout" name="taskButtonsLayout">
         <item stretch="1">
@@ -44,11 +44,11 @@
      </layout>
     </widget>
    </item>
-   <!-- 设计图案预览栏 (right, stretch = 2) -->
+   <!-- Design preview panel (right, stretch = 2) -->
    <item stretch="2">
     <widget class="QWidget" name="designPanel">
      <layout class="QVBoxLayout" name="designVerticalLayout">
-      <!-- 上栏: SVG预览 (stretch 10) -->
+      <!-- Top: SVG preview (stretch 10) -->
       <item stretch="10">
        <!-- patternDesign changed from QLabel to QWebEngineView -->
        <widget class="QWebEngineView" name="patternDesign">
@@ -62,7 +62,7 @@
         </property>
        </widget>
       </item>
-      <!-- 下栏: 下一步按钮 (stretch 1) -->
+      <!-- Bottom: Next button (stretch 1) -->
       <item stretch="1">
        <layout class="QHBoxLayout" name="nextButtonLayout">
         <property name="spacing"><number>0</number></property>

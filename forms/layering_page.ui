@@ -233,7 +233,7 @@
         <item>
          <layout class="QVBoxLayout" name="paramsButtonsLayout">
           <item>
-           <widget class="QPushButton" name="btnStartProcessPlanning">
+           <widget class="QPushButton" name="btnNextStep">
             <property name="text"><string>下一步</string></property>
            </widget>
           </item>

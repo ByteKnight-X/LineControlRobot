@@ -6,7 +6,6 @@ from utilities.constants import STYLE
 from import_page import ImportPage
 from layering_page import LayeringPage
 from routine_page import RoutinePage
-from preparation_page import PreparationPage
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -24,8 +23,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btnImport.clicked.connect(lambda: self.show_page('import_page', self.btnImport))
         self.btnLayering.clicked.connect(lambda: self.show_page('layering_page', self.btnLayering))
         self.btnRoutine.clicked.connect(lambda: self.show_page('routine_page', self.btnRoutine))
-        self.btnMonitoring.clicked.connect(lambda: self.show_page('monitoring_page', self.btnMonitoring))
-        self.btnEvaluation.clicked.connect(lambda: self.show_page('evaluation_page', self.btnEvaluation))
+        # self.btnMonitoring.clicked.connect(lambda: self.show_page('monitoring_page', self.btnMonitoring))
+        # self.btnEvaluation.clicked.connect(lambda: self.show_page('evaluation_page', self.btnEvaluation))
 
         self.show_page('import_page', self.btnImport)
         

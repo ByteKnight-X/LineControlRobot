@@ -10,7 +10,6 @@ class NodeItem(QGraphicsRectItem):
     def __init__(self, rect: QRectF, text: str):
         super().__init__(rect)
         self.node_text = text  # 保存节点文本
-        # 更醒目的填充色和圆角
         self.setBrush(QBrush(QColor("#4A90E2")))  # 蓝色背景
         self.setPen(QPen(QColor("#1A3D6D"), 3))   # 深蓝描边，线宽3
         self.setRect(rect)

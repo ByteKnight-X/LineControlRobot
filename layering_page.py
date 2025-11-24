@@ -24,6 +24,7 @@ class LayeringPage(QtWidgets.QWidget):
     def setup_ui(self) -> None:
         self.btnPrevLayer.clicked.connect(self.show_previous)
         self.btnNextLayer.clicked.connect(self.show_next)
+        self.btnNextStep.clicked.connect(self.next_step)
         self.populate_thumbnails()
         self.refresh_display()
 
@@ -134,6 +135,13 @@ class LayeringPage(QtWidgets.QWidget):
             return
         self.current_index = (self.current_index + 1) % len(self.layer_data)
         self.refresh_display()
+    
+    def next_step(self) -> None:
+        """
+        Proceed to the next step in the workflow.
+        """
+        print("Proceeding to the next step...")
+        self.controller.show_page('routine_page', self.controller.btnRoutine)
 
 
 

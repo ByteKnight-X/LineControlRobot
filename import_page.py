@@ -63,17 +63,16 @@ class ImportPage(QtWidgets.QWidget):
         self.btnNextStep.clicked.connect(self.start_layering)
         self.btnNextStep.setEnabled(False)
 
-        # 编辑/保存按钮状态
+        # Set up edit mode toggle
         self._is_editing = False
         self.btnEditTask.setText("编辑任务单")
         self.btnEditTask.clicked.connect(self.toggle_edit_mode)
-        # patternDesign is QWebEngineView now
         self.patternDesign.setContextMenuPolicy(Qt.NoContextMenu)
 
     
     def toggle_edit_mode(self) -> None:
         self._is_editing = not self._is_editing
-        # 切换所有 QLineEdit 的只读状态
+        # Toggle read-only state of all QLineEdit widgets
         form_layout = self.instructionsWidget.layout()
         for i in range(form_layout.rowCount()):
             field = form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole)
@@ -81,7 +80,7 @@ class ImportPage(QtWidgets.QWidget):
                 widget = field.widget()
                 if isinstance(widget, QtWidgets.QLineEdit):
                     widget.setReadOnly(not self._is_editing)
-        # 切换按钮文本
+        # Toggle button text
         if self._is_editing:
             self.btnEditTask.setText("保存任务单")
         else:
@@ -96,7 +95,7 @@ class ImportPage(QtWidgets.QWidget):
                 form_layout.removeRow(0)
             return
 
-        # 通用 QLayout 清理逻辑
+        # General QLayout clearing logic
         while form_layout.count():
             item = form_layout.takeAt(0)
             if item is None:
