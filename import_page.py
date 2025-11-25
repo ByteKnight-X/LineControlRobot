@@ -189,7 +189,12 @@ class ImportPage(QtWidgets.QWidget):
     def start_layering(self) -> None:
         print("Starting layering...")
         self.controller.context['layering_data'] = [
-            "resource\\layers\\8Pro.svg", 
-            "resource\\layers\\OneItem_1.svg"
+            r"resource\layers\0_处理剂.svg", 
+            r"resource\layers\1_胶浆.svg",
+            r"resource\layers\2_深蓝.svg",
+            r"resource\layers\3_深绿.svg",
+            r"resource\layers\4_浅蓝.svg",
+            r"resource\layers\5_粉色.svg",
+            r"resource\layers\6_浅绿.svg"
         ]
         self.controller.show_page('layering_page', self.controller.btnLayering)

@@ -7,6 +7,7 @@ from PyQt5.QtCore import QUrl
 from pathlib import Path
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon, QPixmap
+from utilities.constants import DEFAULT_MESH_PARAMS
 
 
 class LayeringPage(QtWidgets.QWidget):
@@ -84,11 +85,14 @@ class LayeringPage(QtWidgets.QWidget):
             self.layerPreview.setHtml("<html><body></body></html>", QUrl("about:blank"))
             self.layerIndexLabel.setText("0 / 0")
             return
+        
         item = self.layer_data[self.current_index]
         if not item:
             self.layerPreview.setHtml("<html><body><div style='padding:12px;color:#900;'>Missing data</div></body></html>", QUrl("about:blank"))
             self.layerIndexLabel.setText(f"{self.current_index + 1} / {total}")
             return
+        
+        # Render SVG
         if isinstance(item, str):
             p = Path(item)
             if not p.is_absolute():
@@ -98,8 +102,7 @@ class LayeringPage(QtWidgets.QWidget):
             else:
                 self.layerPreview.load(QUrl.fromLocalFile(str(p)))
             self.layerIndexLabel.setText(f"{self.current_index + 1} / {total}")
-            return
-        if isinstance(item, (bytes, bytearray)):
+        elif isinstance(item, (bytes, bytearray)):
             try:
                 svg_text = item.decode("utf-8")
             except Exception:
@@ -113,10 +116,59 @@ class LayeringPage(QtWidgets.QWidget):
             )
             self.layerPreview.setHtml(html, QUrl("about:blank"))
             self.layerIndexLabel.setText(f"{self.current_index + 1} / {total}")
-            return
-        self.layerPreview.setHtml("<html><body><div style='padding:12px;color:#900;'>Unsupported layer data</div></body></html>", QUrl("about:blank"))
-        self.layerIndexLabel.setText(f"{self.current_index + 1} / {total}")
+        else:
+            self.layerPreview.setHtml("<html><body><div style='padding:12px;color:#900;'>Unsupported layer data</div></body></html>", QUrl("about:blank"))
+            self.layerIndexLabel.setText(f"{self.current_index + 1} / {total}")
+        
+        # Load DEFAULT_MESH_PARAMS into the parameter form on the right panel
+        self._populate_mesh_params(DEFAULT_MESH_PARAMS)
 
+    def _populate_mesh_params(self, params: dict) -> None:
+        """Fill right-panel fields using params entry matching current_index (e.g. '0_处理剂'). 
+        Selected fields are set non-editable."""
+        # choose key that starts with "<index>_"
+        target_prefix = f"{self.current_index}_"
+        entry = None
+        for k, v in params.items():
+            if str(k).startswith(target_prefix):
+                entry = v if isinstance(v, dict) else {}
+                break
+
+        # map logical names to widgets
+        field_map = {
+            "material": self.materialLineEdit,
+            "model": self.modelLineEdit,
+            "wire_diameter": self.wireDiameterLineEdit,
+            "pulling_method": self.pullingMethodCombo,
+            "pulling_angle": self.pullingAngleLineEdit,
+            "mesh_count": self.meshCountLineEdit,
+            "tension": self.tensionLineEdit,
+            "frame_model": self.frameModelLineEdit,
+        }
+
+        for key, widget in field_map.items():
+            print(entry)
+            val = entry.get(key, "")
+            if isinstance(widget, QtWidgets.QLineEdit):
+                print("lineedit", key, val)
+                widget.setText("" if val is None else str(val))
+                widget.setReadOnly(True)
+            elif isinstance(widget, QtWidgets.QComboBox):
+                print("combobox", key, val)
+                # try to set matching text, else clear selection; then disable
+                idx = widget.findText(str(val)) if val != "" else -1
+                if idx >= 0:
+                    widget.setCurrentIndex(idx)
+                else:
+                    widget.setCurrentIndex(-1)
+                widget.setEnabled(False)
+            else:
+                print("failuere")
+                # generic handling for other widget types
+                try:
+                    widget.setDisabled(True)
+                except Exception:
+                    pass
 
     def show_previous(self) -> None:
         """
