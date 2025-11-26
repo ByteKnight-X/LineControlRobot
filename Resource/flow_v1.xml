@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+                             http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+
+  <!-- ===== 1. 定义节点和边的属性（key） ===== -->
+  <!-- 节点属性：设备ID -->
+  <key id="k_deviceId"   for="node" attr.name="DeviceID"    attr.type="string"/>
+  <!-- 节点属性：设备类型 -->
+  <key id="k_deviceType" for="node" attr.name="DeviceType"  attr.type="string"/>
+  <!-- 节点属性：设备指令 -->
+  <key id="k_instruction" for="node" attr.name="Instruction" attr.type="string"/>
+
+  <!-- 边属性：边类型（forward / loop 等） -->
+  <key id="k_edgeType"   for="edge" attr.name="EdgeType"    attr.type="string"/>
+  <!-- 边属性：循环次数（仅在循环边上使用） -->
+  <key id="k_loopCount"  for="edge" attr.name="LoopCount"   attr.type="int"/>
+
+  <!-- ===== 2. 图本体：产线拓扑 ===== -->
+  <graph id="Line_001" edgedefault="directed">
+
+    <!-- 上料工作站 -->
+    <node id="n_loader">
+      <data key="k_deviceId">10001</data>
+      <data key="k_deviceType">上料工作站</data>
+      <data key="k_instruction">上料工作站: 将待印刷鞋面上料并完成条码扫描与计数</data>
+    </node>
+
+    <!-- 丝印工作站 1 -->
+    <node id="n_sp1">
+      <data key="k_deviceId">10002</data>
+      <data key="k_deviceType">丝印工作站</data>
+      <data key="k_instruction">丝印工作站1: 使用打底胶浆刷5次，目标厚度1mm</data>
+    </node>
+
+    <!-- 烘干机 -->
+    <node id="n_dryer">
+      <data key="k_deviceId">10003</data>
+      <data key="k_deviceType">烘干机</data>
+      <data key="k_instruction">烘干机: 默认烘干指令，150℃烘干3min，确保胶浆表干不粘手</data>
+    </node>
+
+    <!-- 下料工作站 -->
+    <node id="n_unloader">
+      <data key="k_deviceId">10004</data>
+      <data key="k_deviceType">下料工作站</data>
+      <data key="k_instruction">下料工作站: 将已完成2次丝印+烘干的鞋面下料并装框</data>
+    </node>
+
+    <!-- 上料 -> 丝印1 -->
+    <edge id="e0" source="n_loader" target="n_sp1">
+      <data key="k_edgeType">forward</data>
+    </edge>
+
+    <!-- 丝印1 -> 烘干 -->
+    <edge id="e1" source="n_sp1" target="n_dryer">
+      <data key="k_edgeType">forward</data>
+    </edge>
+
+    <!-- 烘干 -> 下料 (最终流向) -->
+    <edge id="e2" source="n_dryer" target="n_unloader">
+      <data key="k_edgeType">forward</data>
+    </edge>
+
+    <!-- 循环边：烘干 -> 丝印1，表示 (丝印1 -> 烘干) 这个环路重复2次 -->
+    <edge id="e_loop_sp1_dry" source="n_dryer" target="n_sp1">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+  </graph>
+</graphml>
