@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FabricPreparationInstruction xmlns="urn:linecontrol:screen-prep" version="1.1">
+  <Type>面料准备指令</Type>
+  <Number>13524</Number>
+  <Date>2025-10-30</Date>
+  <Description>面料准备流程：领取料篮和裁片，将裁片装入料篮。</Description>
+  <Steps>
+    <Step id="1">
+      <Instruction>从线边库领取料篮</Instruction>
+      <Parameters>
+        <物料名称>料篮</物料名称>
+        <数量>1000</数量>
+        <单位>个</单位>
+        <备注>用于装载裁片</备注>
+      </Parameters>
+    </Step>
+    <Step id="2">
+      <Instruction>从线边库领取裁片A</Instruction>
+      <Parameters>
+        <物料名称>裁片A</物料名称>
+        <数量>1000</数量>
+        <单位>片</单位>
+        <备注>用于本批次生产</备注>
+      </Parameters>
+    </Step>
+    <Step id="3">
+      <Instruction>将裁片A装入料篮</Instruction>
+      <Parameters>
+        <操作>装配</操作>
+        <目标物料>裁片A</目标物料>
+        <容器>料篮</容器>
+        <数量>1000</数量>
+        <单位>片</单位>
+        <备注>每个料篮装一片裁片A</备注>
+      </Parameters>
+    </Step>
+  </Steps>
+</FabricPreparationInstruction>

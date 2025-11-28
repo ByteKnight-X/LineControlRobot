@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<InkPreparationInstruction xmlns="urn:linecontrol:screen-prep" version="1.1">
+  <Type>胶浆油墨准备指令</Type>
+  <Number>13524</Number>
+  <Date>2025-10-30</Date>
+  <Description>七层网版对应胶浆油墨准备，每层包含色号（潘通）、重量等关键属性。</Description>
+  <Steps>
+    <Step id="0">
+      <Instruction>准备处理剂胶浆</Instruction>
+      <Parameters>
+        <网版ID>0</网版ID>
+        <色号>PANTONE Transparent</色号>
+        <重量>200g</重量>
+        <类型>处理剂</类型>
+        <备注>用于鞋面底层处理，提高附着力</备注>
+      </Parameters>
+    </Step>
+    <Step id="1">
+      <Instruction>准备胶浆</Instruction>
+      <Parameters>
+        <网版ID>1</网版ID>
+        <色号>PANTONE White</色号>
+        <重量>300g</重量>
+        <类型>打底胶浆</类型>
+        <备注>高遮盖力，厚刷5次</备注>
+      </Parameters>
+    </Step>
+    <Step id="2">
+      <Instruction>准备深蓝油墨</Instruction>
+      <Parameters>
+        <网版ID>2</网版ID>
+        <色号>PANTONE 288C</色号>
+        <重量>150g</重量>
+        <类型>功能胶浆</类型>
+        <备注>深蓝色，厚刷3次</备注>
+      </Parameters>
+    </Step>
+    <Step id="3">
+      <Instruction>准备深绿油墨</Instruction>
+      <Parameters>
+        <网版ID>3</网版ID>
+        <色号>PANTONE 3425C</色号>
+        <重量>150g</重量>
+        <类型>功能胶浆</类型>
+        <备注>深绿色，厚刷2次</备注>
+      </Parameters>
+    </Step>
+    <Step id="4">
+      <Instruction>准备浅蓝油墨</Instruction>
+      <Parameters>
+        <网版ID>4</网版ID>
+        <色号>PANTONE 290C</色号>
+        <重量>120g</重量>
+        <类型>功能胶浆</类型>
+        <备注>浅蓝色，厚刷2次</备注>
+      </Parameters>
+    </Step>
+    <Step id="5">
+      <Instruction>准备粉色网点油墨</Instruction>
+      <Parameters>
+        <网版ID>5</网版ID>
+        <色号>PANTONE 1895C</色号>
+        <重量>100g</重量>
+        <类型>网点胶浆</类型>
+        <备注>粉色网点，厚刷2次</备注>
+      </Parameters>
+    </Step>
+    <Step id="6">
+      <Instruction>准备浅绿油墨</Instruction>
+      <Parameters>
+        <网版ID>6</网版ID>
+        <色号>PANTONE 337C</色号>
+        <重量>120g</重量>
+        <类型>功能胶浆</类型>
+        <备注>浅绿色，厚刷2次</备注>
+      </Parameters>
+    </Step>
+  </Steps>
+</InkPreparationInstruction>

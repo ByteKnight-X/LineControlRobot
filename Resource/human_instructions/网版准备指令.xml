@@ -1,29 +1,91 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ScreenPreparationInstruction xmlns="urn:linecontrol:screen-prep" version="1.0">
+<ScreenPreparationInstruction xmlns="urn:linecontrol:screen-prep" version="1.1">
   <Type>网版准备指令</Type>
   <Number>13524</Number>
-  <Date>2025年10月30日</Date>
+  <Date>2025-10-30</Date>
+  <Description>七层网版准备：0=处理剂，1=胶浆，2=深蓝，3=深绿，4=浅蓝，5=粉色网点，6=浅绿。设计文件位于 resource\layers。</Description>
   <Steps>
     <Step id="0">
-      <Instruction>制作网版0</Instruction>
+      <Instruction>制作网版0 - 处理剂层</Instruction>
       <Parameters>
         <网版ID>0</网版ID>
-        <设计文件>P0</设计文件>
+        <设计文件>resource/layers/layer0.svg</设计文件>
         <张力>15</张力>
         <目数>100</目数>
         <线径>300</线径>
         <感光胶层厚>200</感光胶层厚>
       </Parameters>
     </Step>
+
     <Step id="1">
-      <Instruction>制作网版1</Instruction>
+      <Instruction>制作网版1 - 胶浆层</Instruction>
       <Parameters>
         <网版ID>1</网版ID>
-        <设计文件>P0</设计文件>
+        <设计文件>resource/layers/layer1.svg</设计文件>
         <张力>15</张力>
-        <目数>100</目数>
-        <线径>300</线径>
-        <感光胶层厚>200</感光胶层厚>
+        <目数>90</目数>
+        <线径>280</线径>
+        <感光胶层厚>180</感光胶层厚>
+      </Parameters>
+    </Step>
+
+    <Step id="2">
+      <Instruction>制作网版2 - 深蓝油墨层</Instruction>
+      <Parameters>
+        <网版ID>2</网版ID>
+        <设计文件>resource/layers/layer2.svg</设计文件>
+        <张力>18</张力>
+        <目数>77</目数>
+        <线径>62</线径>
+        <感光胶层厚>120</感光胶层厚>
+      </Parameters>
+    </Step>
+
+    <Step id="3">
+      <Instruction>制作网版3 - 深绿油墨层</Instruction>
+      <Parameters>
+        <网版ID>3</网版ID>
+        <设计文件>resource/layers/layer3.svg</设计文件>
+        <张力>18</张力>
+        <目数>77</目数>
+        <线径>62</线径>
+        <感光胶层厚>120</感光胶层厚>
+      </Parameters>
+    </Step>
+
+    <Step id="4">
+      <Instruction>制作网版4 - 浅蓝油墨层</Instruction>
+      <Parameters>
+        <网版ID>4</网版ID>
+        <设计文件>resource/layers/layer4.svg</设计文件>
+        <张力>18</张力>
+        <目数>77</目数>
+        <线径>62</线径>
+        <感光胶层厚>120</感光胶层厚>
+      </Parameters>
+    </Step>
+
+    <Step id="5">
+      <Instruction>制作网版5 - 粉色网点油墨层</Instruction>
+      <Parameters>
+        <网版ID>5</网版ID>
+        <设计文件>resource/layers/layer5.svg</设计文件>
+        <张力>18</张力>
+        <目数>77</目数>
+        <线径>62</线径>
+        <感光胶层厚>120</感光胶层厚>
+      </Parameters>
+    </Step>
+
+    <Step id="6">
+      <Instruction>制作网版6 - 浅绿油墨层</Instruction>
+      <Parameters>
+        <网版ID>6</网版ID>
+        <设计文件>resource/layers/layer6.svg</设计文件>
+        <张力>18</张力>
+        <目数>77</目数>
+        <线径>62</线径>
+        <感光胶层厚>120</感光胶层厚>
       </Parameters>
     </Step>
   </Steps>

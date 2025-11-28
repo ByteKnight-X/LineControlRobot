@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+                             http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+
+  <!-- node/edge attribute definitions -->
+  <key id="k_deviceId"   for="node" attr.name="DeviceID"    attr.type="string"/>
+  <key id="k_deviceType" for="node" attr.name="DeviceType"  attr.type="string"/>
+  <key id="k_instruction" for="node" attr.name="Instruction" attr.type="string"/>
+  <key id="k_edgeType"   for="edge" attr.name="EdgeType"    attr.type="string"/>
+  <key id="k_loopCount"  for="edge" attr.name="LoopCount"   attr.type="int"/>
+
+  <graph id="Line_002" edgedefault="directed">
+
+    <!-- Loader -->
+    <node id="n_loader">
+      <data key="k_deviceId">20001</data>
+      <data key="k_deviceType">上料工作站</data>
+      <data key="k_instruction">上料工作站: 将待印刷鞋面上料并完成条码扫描与计数</data>
+    </node>
+
+    <!-- Silk Screen 1 -->
+    <node id="n_sp1">
+      <data key="k_deviceId">20002</data>
+      <data key="k_deviceType">丝印工作站</data>
+      <data key="k_instruction">丝印工作站1: 使用打底胶浆刷5次，目标厚度1.0mm；确认对位</data>
+    </node>
+
+    <!-- Dryer 1 -->
+    <node id="n_dryer1">
+      <data key="k_deviceId">20003</data>
+      <data key="k_deviceType">烘干机</data>
+      <data key="k_instruction">烘干机1: 150℃，3min；确保胶浆表干不粘手</data>
+    </node>
+
+    <!-- Silk Screen 2-3 and Dryer 2-3 (loop x3) -->
+    <node id="n_sp2">
+      <data key="k_deviceId">20004</data>
+      <data key="k_deviceType">丝印工作站</data>
+      <data key="k_instruction">丝印工作站2: 使用功能胶浆刷3次，目标厚度0.8mm；检查粘度</data>
+    </node>
+    <node id="n_dryer2">
+      <data key="k_deviceId">20005</data>
+      <data key="k_deviceType">烘干机</data>
+      <data key="k_instruction">烘干机2: 150℃，2min；确保层间结合</data>
+    </node>
+    <node id="n_sp3">
+      <data key="k_deviceId">20006</data>
+      <data key="k_deviceType">丝印工作站</data>
+      <data key="k_instruction">丝印工作站3: 使用功能胶浆刷2次，目标厚度0.6mm；检查均匀性</data>
+    </node>
+    <node id="n_dryer3">
+      <data key="k_deviceId">20007</data>
+      <data key="k_deviceType">烘干机</data>
+      <data key="k_instruction">烘干机3: 150℃，2min；表面干燥检测</data>
+    </node>
+
+    <!-- Silk Screen 4-10 and Dryers, each loop x2 -->
+    <node id="n_sp4"><data key="k_deviceId">20008</data><data key="k_deviceType">丝印工作站</data><data key="k_instruction">丝印工作站4: 使用功能胶浆刷2次，目标厚度0.6mm</data></node>
+    <node id="n_dryer4"><data key="k_deviceId">20009</data><data key="k_deviceType">烘干机</data><data key="k_instruction">烘干机4: 150℃，2min</data></node>
+
+    <node id="n_sp5"><data key="k_deviceId">20010</data><data key="k_deviceType">丝印工作站</data><data key="k_instruction">丝印工作站5: 使用功能胶浆刷2次，目标厚度0.6mm</data></node>
+    <node id="n_dryer5"><data key="k_deviceId">20011</data><data key="k_deviceType">烘干机</data><data key="k_instruction">烘干机5: 150℃，2min</data></node>
+
+    <node id="n_sp6"><data key="k_deviceId">20012</data><data key="k_deviceType">丝印工作站</data><data key="k_instruction">丝印工作站6: 使用功能胶浆刷2次，目标厚度0.6mm</data></node>
+    <node id="n_dryer6"><data key="k_deviceId">20013</data><data key="k_deviceType">烘干机</data><data key="k_instruction">烘干机6: 150℃，2min</data></node>
+
+    <node id="n_sp7"><data key="k_deviceId">20014</data><data key="k_deviceType">丝印工作站</data><data key="k_instruction">丝印工作站7: 使用功能胶浆刷2次，目标厚度0.6mm</data></node>
+    <node id="n_dryer7"><data key="k_deviceId">20015</data><data key="k_deviceType">烘干机</data><data key="k_instruction">烘干机7: 150℃，2min</data></node>
+
+    <node id="n_sp8"><data key="k_deviceId">20016</data><data key="k_deviceType">丝印工作站</data><data key="k_instruction">丝印工作站8: 使用功能胶浆刷2次，目标厚度0.6mm</data></node>
+    <node id="n_dryer8"><data key="k_deviceId">20017</data><data key="k_deviceType">烘干机</data><data key="k_instruction">烘干机8: 150℃，2min</data></node>
+
+    <node id="n_sp9"><data key="k_deviceId">20018</data><data key="k_deviceType">丝印工作站</data><data key="k_instruction">丝印工作站9: 使用功能胶浆刷2次，目标厚度0.6mm</data></node>
+    <node id="n_dryer9"><data key="k_deviceId">20019</data><data key="k_deviceType">烘干机</data><data key="k_instruction">烘干机9: 150℃，2min</data></node>
+
+    <node id="n_sp10"><data key="k_deviceId">20020</data><data key="k_deviceType">丝印工作站</data><data key="k_instruction">丝印工作站10: 使用功能胶浆刷2次，目标厚度0.6mm</data></node>
+    <node id="n_dryer10"><data key="k_deviceId">20021</data><data key="k_deviceType">烘干机</data><data key="k_instruction">烘干机10: 150℃，2min</data></node>
+
+    <!-- Quality inspection and Unloader -->
+    <node id="n_qc">
+      <data key="k_deviceId">20022</data>
+      <data key="k_deviceType">质检工作站</data>
+      <data key="k_instruction">质检工作站: 检测印刷质量、厚度与固着性，异常品标记并剔除</data>
+    </node>
+
+    <node id="n_unloader">
+      <data key="k_deviceId">20023</data>
+      <data key="k_deviceType">下料工作站</data>
+      <data key="k_instruction">下料工作站: 将合格产品下料并装框，准备入库</data>
+    </node>
+
+    <!-- Edges: main forward flow -->
+    <edge id="e0" source="n_loader" target="n_sp1"><data key="k_edgeType">forward</data></edge>
+    <edge id="e1" source="n_sp1" target="n_dryer1"><data key="k_edgeType">forward</data></edge>
+
+    <!-- connect dryer1 -> sp2 to continue flow -->
+    <edge id="e2" source="n_dryer1" target="n_sp2"><data key="k_edgeType">forward</data></edge>
+    <edge id="e3" source="n_sp2" target="n_dryer2"><data key="k_edgeType">forward</data></edge>
+    <edge id="e4" source="n_dryer2" target="n_sp3"><data key="k_edgeType">forward</data></edge>
+    <edge id="e5" source="n_sp3" target="n_dryer3"><data key="k_edgeType">forward</data></edge>
+
+    <!-- loop: (sp2->dryer2->sp3->dryer3) x3 -->
+    <edge id="e_loop_2_3" source="n_dryer3" target="n_sp2">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">3</data>
+    </edge>
+
+    <!-- continue to sp4..sp10 with each pair looping x2 -->
+    <edge id="e6"  source="n_dryer3"  target="n_sp4"><data key="k_edgeType">forward</data></edge>
+    <edge id="e7"  source="n_sp4"     target="n_dryer4"><data key="k_edgeType">forward</data></edge>
+    <edge id="e_loop_4" source="n_dryer4" target="n_sp4">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+    <edge id="e8"  source="n_dryer4"  target="n_sp5"><data key="k_edgeType">forward</data></edge>
+    <edge id="e9"  source="n_sp5"     target="n_dryer5"><data key="k_edgeType">forward</data></edge>
+    <edge id="e_loop_5" source="n_dryer5" target="n_sp5">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+    <edge id="e10" source="n_dryer5"  target="n_sp6"><data key="k_edgeType">forward</data></edge>
+    <edge id="e11" source="n_sp6"     target="n_dryer6"><data key="k_edgeType">forward</data></edge>
+    <edge id="e_loop_6" source="n_dryer6" target="n_sp6">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+    <edge id="e12" source="n_dryer6"  target="n_sp7"><data key="k_edgeType">forward</data></edge>
+    <edge id="e13" source="n_sp7"     target="n_dryer7"><data key="k_edgeType">forward</data></edge>
+    <edge id="e_loop_7" source="n_dryer7" target="n_sp7">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+    <edge id="e14" source="n_dryer7"  target="n_sp8"><data key="k_edgeType">forward</data></edge>
+    <edge id="e15" source="n_sp8"     target="n_dryer8"><data key="k_edgeType">forward</data></edge>
+    <edge id="e_loop_8" source="n_dryer8" target="n_sp8">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+    <edge id="e16" source="n_dryer8"  target="n_sp9"><data key="k_edgeType">forward</data></edge>
+    <edge id="e17" source="n_sp9"     target="n_dryer9"><data key="k_edgeType">forward</data></edge>
+    <edge id="e_loop_9" source="n_dryer9" target="n_sp9">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+    <edge id="e18" source="n_dryer9"  target="n_sp10"><data key="k_edgeType">forward</data></edge>
+    <edge id="e19" source="n_sp10"    target="n_dryer10"><data key="k_edgeType">forward</data></edge>
+    <edge id="e_loop_10" source="n_dryer10" target="n_sp10">
+      <data key="k_edgeType">loop</data>
+      <data key="k_loopCount">2</data>
+    </edge>
+
+    <!-- after final dryer go to quality control then unloader -->
+    <edge id="e20" source="n_dryer10" target="n_qc"><data key="k_edgeType">forward</data></edge>
+    <edge id="e21" source="n_qc"      target="n_unloader"><data key="k_edgeType">forward</data></edge>
+
+  </graph>
+</graphml>

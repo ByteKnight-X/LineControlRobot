@@ -7,27 +7,27 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
-# simple Node item (rect with text)
+# Simple Node item (rect with text)
 class NodeItem(QGraphicsRectItem):
     def __init__(self, rect: QRectF, text: str):
         super().__init__(rect)
-        self.node_text = text  # 保存节点文本
-        self.setBrush(QBrush(QColor("#4A90E2")))  # 蓝色背景
-        self.setPen(QPen(QColor("#1A3D6D"), 3))   # 深蓝描边，线宽3
+        self.node_text = text  # Save node text
+        self.setBrush(QBrush(QColor("#4A90E2")))  # Blue background
+        self.setPen(QPen(QColor("#1A3D6D"), 3))   # Dark blue border, width 3
         self.setRect(rect)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
 
-        # 圆角绘制（重写 paint 方法）
+        # Rounded corner drawing (override paint method)
         self.round_radius = 24
 
-        # 美观的文本
+        # Aesthetic text
         txt = QGraphicsSimpleTextItem(text, self)
         font = txt.font()
         font.setPointSize(24)
         font.setBold(True)
         txt.setFont(font)
-        txt.setBrush(QBrush(QColor("#fff")))  # 白色字体
+        txt.setBrush(QBrush(QColor("#fff")))  # White font
         txt_rect = txt.boundingRect()
         txt.setPos(rect.x() + (rect.width() - txt_rect.width())/2,
                    rect.y() + (rect.height() - txt_rect.height())/2)
@@ -36,11 +36,11 @@ class NodeItem(QGraphicsRectItem):
         txt.setAcceptedMouseButtons(Qt.NoButton)
         txt.setAcceptHoverEvents(False)
 
-        # make sure parent item can still receive mouse events
+        # Make sure parent item can still receive mouse events
         self.setAcceptHoverEvents(True)
 
     def paint(self, painter, option, widget=None):
-        # 绘制圆角矩形
+        # Draw rounded rectangle
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(self.brush())
         painter.setPen(self.pen())
@@ -48,7 +48,7 @@ class NodeItem(QGraphicsRectItem):
 
     def mousePressEvent(self, ev):
         print("Clicked node:", self.node_text)
-        QtWidgets.QMessageBox.information(None, "节点", f"你点击了节点: {self.node_text}")
+        QtWidgets.QMessageBox.information(None, "设备信息", f"{self.node_text}")
         super().mousePressEvent(ev)
 
 
@@ -59,7 +59,145 @@ class RoutinePage(QtWidgets.QWidget):
         super().__init__()
         uic.loadUi("forms/routine_page.ui", self)
         self.controller = controller
+        self.setup_ui()
+    
+    def setup_ui(self) -> None:
+        # Only consider btnMeshPreparation
+        self.btnMeshPreparation.clicked.connect(self.show_mesh_preparation)
+        self.btnInkPreparation.clicked.connect(self.show_ink_preparation)
+        self.btnFabricPreparation.clicked.connect(self.show_fabric_preparation)
+        self.btnEquipmentPreparation.clicked.connect(self.show_equipment_preparation)
         self.create_flow()
+        self.show_mesh_preparation()
+
+    def show_equipment_preparation(self):
+        """Load equipment preparation instructions and convert them into a form easy for technicians to read, display in prepInfoText."""
+        xml_path = Path(__file__).resolve().parent / "resource" / "human_instructions" / "设备准备指令.xml"
+        try:
+            tree = ET.parse(str(xml_path))
+            root = tree.getroot()
+            ns = {'ns': 'urn:linecontrol:screen-prep'}
+            steps = root.find(".//ns:Steps", ns)
+            if steps is None:
+                self.prepInfoText.setPlainText("未找到设备准备指令内容。")
+                return
+
+            lines = []
+            for step in steps.findall("ns:Step", ns):
+                sid = step.get("id", "")
+                instr = step.findtext("ns:Instruction", "", ns)
+                params = step.find("ns:Parameters", ns)
+                lines.append(f"【步骤 {sid}】{instr}")
+                if params is not None:
+                    for p in params:
+                        tag = p.tag.split('}', 1)[-1]
+                        val = p.text
+                        # Highlight key attributes
+                        if tag in ("工作站", "物料", "色号", "重量", "数量", "单位"):
+                            lines.append(f"    {tag}: {val}  ←")
+                        else:
+                            lines.append(f"    {tag}: {val}")
+                lines.append("")  # Blank line separator
+
+            text = "\n".join(lines)
+            self.prepInfoText.setPlainText(text)
+        except Exception as e:
+            self.prepInfoText.setPlainText(f"设备准备指令加载失败：{e}")
+
+    def show_fabric_preparation(self):
+        """Load fabric preparation instructions and convert them into a form easy for technicians to read, display in prepInfoText."""
+        xml_path = Path(__file__).resolve().parent / "resource" / "human_instructions" / "面料准备指令.xml"
+        try:
+            tree = ET.parse(str(xml_path))
+            root = tree.getroot()
+            ns = {'ns': 'urn:linecontrol:screen-prep'}
+            steps = root.find(".//ns:Steps", ns)
+            if steps is None:
+                self.prepInfoText.setPlainText("未找到面料准备指令内容。")
+                return
+
+            lines = []
+            for step in steps.findall("ns:Step", ns):
+                sid = step.get("id", "")
+                instr = step.findtext("ns:Instruction", "", ns)
+                params = step.find("ns:Parameters", ns)
+                lines.append(f"【步骤 {sid}】{instr}")
+                if params is not None:
+                    for p in params:
+                        tag = p.tag.split('}', 1)[-1]
+                        val = p.text
+                        # Highlight key attributes
+                        if tag in ("物料名称", "数量", "单位", "操作", "目标物料", "容器"):
+                            lines.append(f"    {tag}: {val}  ←")
+                        else:
+                            lines.append(f"    {tag}: {val}")
+                lines.append("")  # Blank line separator
+
+            text = "\n".join(lines)
+            self.prepInfoText.setPlainText(text)
+        except Exception as e:
+            self.prepInfoText.setPlainText(f"面料准备指令加载失败：{e}")
+
+    def show_ink_preparation(self):
+        """Load ink preparation instructions and convert them into a form easy for technicians to read, display in prepInfoText."""
+        xml_path = Path(__file__).resolve().parent / "resource" / "human_instructions" / "胶浆油墨准备指令.xml"
+        try:
+            tree = ET.parse(str(xml_path))
+            root = tree.getroot()
+            ns = {'ns': 'urn:linecontrol:screen-prep'}
+            steps = root.find(".//ns:Steps", ns)
+            if steps is None:
+                self.prepInfoText.setPlainText("未找到胶浆油墨准备指令内容。")
+                return
+
+            # Convert to technician-readable format
+            lines = []
+            for step in steps.findall("ns:Step", ns):
+                sid = step.get("id", "")
+                instr = step.findtext("ns:Instruction", "", ns)
+                params = step.find("ns:Parameters", ns)
+                lines.append(f"【步骤 {sid}】{instr}")
+                if params is not None:
+                    for p in params:
+                        tag = p.tag.split('}', 1)[-1]
+                        val = p.text
+                        # Highlight key attributes
+                        if tag in ("色号", "重量", "类型"):
+                            lines.append(f"    {tag}: {val}  ←")
+                        else:
+                            lines.append(f"    {tag}: {val}")
+                lines.append("")  # Blank line separator
+
+            text = "\n".join(lines)
+            self.prepInfoText.setPlainText(text)
+        except Exception as e:
+            self.prepInfoText.setPlainText(f"胶浆油墨准备指令加载失败：{e}")
+
+    def show_mesh_preparation(self):
+        xml_path = Path(__file__).resolve().parent / "resource" / "human_instructions" / "网版准备指令.xml"
+        try:
+            tree = ET.parse(str(xml_path))
+            root = tree.getroot()
+            ns = {'ns': 'urn:linecontrol:screen-prep'}
+            steps = root.find(".//ns:Steps", ns)
+            if steps is None:
+                self.prepInfoText.setPlainText("未找到网版准备指令内容。")
+                return
+
+            lines = []
+            for step in steps.findall("ns:Step", ns):
+                sid = step.get("id", "")
+                instr = step.findtext("ns:Instruction", "", ns)
+                params = step.find("ns:Parameters", ns)
+                lines.append(f"【步骤 {sid}】{instr}")
+                if params is not None:
+                    for p in params:
+                        lines.append(f"    {p.tag.split('}', 1)[-1]}: {p.text}")
+                lines.append("")
+            text = "\n".join(lines)
+            self.prepInfoText.setPlainText(text)
+        except Exception as e:
+            self.prepInfoText.setPlainText(f"网版准备指令加载失败：{e}")
     
     def create_flow(self) -> None:
         """Load production_line.xml and render flow graph with loops in flowGraphicsView."""
@@ -67,8 +205,11 @@ class RoutinePage(QtWidgets.QWidget):
         self.flowGraphicsView.setScene(scene)
         self.flowGraphicsView.setRenderHint(QPainter.Antialiasing)
 
+        # Enable pan/zoom interaction (solve long line appearing too small)
+        self._enable_interaction()
+
         # Load and parse XML
-        xml_path = Path(__file__).resolve().parent / "resource" / "production_line.xml"
+        xml_path = Path(__file__).resolve().parent / "resource" / "flow_v2.xml"
         tree = ET.parse(xml_path)
         root = tree.getroot()
         ns = {"gml": "http://graphml.graphdrawing.org/xmlns"}
@@ -196,7 +337,7 @@ class RoutinePage(QtWidgets.QWidget):
         # Adjust view to fit content with extra margin        
         bbox = scene.itemsBoundingRect().adjusted(-50, -50, 50, 50)
         scene.setSceneRect(bbox)
-        self.flowGraphicsView.fitInView(bbox, Qt.KeepAspectRatio)
+        self._fit_view(bbox)  # Use our helper to fit once, keep user zoom afterward
 
 
     def _draw_arrow(self, scene, p1: QPointF, p2: QPointF, color: QColor, width: int):
@@ -231,10 +372,50 @@ class RoutinePage(QtWidgets.QWidget):
             points.append(QPointF(x, y))
         return points
 
+    def _enable_interaction(self) -> None:
+        """Add zoom and pan to flowGraphicsView."""
+        gv = self.flowGraphicsView
+        # Pan: hold left mouse to select items; hold middle mouse or set drag mode for right button
+        gv.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+        gv.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
+        gv.setResizeAnchor(QtWidgets.QGraphicsView.AnchorViewCenter)
+        gv.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+
+        # Install event filter for mouse wheel zoom
+        if not hasattr(self, "_wheel_filter_installed"):
+            gv.viewport().installEventFilter(self)
+            self._wheel_filter_installed = True
+
+        # Optional: keyboard shortcuts for zoom in/out and reset
+        QtWidgets.QShortcut(Qt.Key_Plus, gv, activated=lambda: gv.scale(1.2, 1.2))
+        QtWidgets.QShortcut(Qt.Key_Minus, gv, activated=lambda: gv.scale(1/1.2, 1/1.2))
+        QtWidgets.QShortcut(Qt.Key_0, gv, activated=self._reset_view)
+
+    def _fit_view(self, bbox) -> None:
+        """Fit once after building scene; do not override user zoom later."""
+        self.flowGraphicsView.fitInView(bbox, Qt.KeepAspectRatio)
+
+    def _reset_view(self):
+        scene = self.flowGraphicsView.scene()
+        if not scene:
+            return
+        bbox = scene.itemsBoundingRect().adjusted(-50, -50, 50, 50)
+        self.flowGraphicsView.resetTransform()
+        self.flowGraphicsView.fitInView(bbox, Qt.KeepAspectRatio)
+
+    def eventFilter(self, obj, event):
+        """Wheel zoom: Ctrl+Wheel or plain wheel to zoom; Shift+Wheel for horizontal pan."""
+        from PyQt5.QtCore import QEvent
+        if obj is self.flowGraphicsView.viewport() and event.type() == QEvent.Wheel:
+            # Zoom factor
+            zoom_in_factor = 1.15
+            zoom_out_factor = 1.0 / zoom_in_factor
+            delta = event.angleDelta().y()
+            factor = zoom_in_factor if delta > 0 else zoom_out_factor
+            # Apply zoom
+            self.flowGraphicsView.scale(factor, factor)
+            return True  # Consume event
+        return super().eventFilter(obj, event)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # 重新适配视图内容
-        scene = self.flowGraphicsView.scene()
-        if scene:
-            bbox = scene.itemsBoundingRect().adjusted(-50, -50, 50, 50)
-            self.flowGraphicsView.fitInView(bbox, Qt.KeepAspectRatio)

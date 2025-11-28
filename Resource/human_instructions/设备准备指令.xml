@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DevicePreparationInstruction xmlns="urn:linecontrol:screen-prep" version="1.1">
+  <Type>设备准备指令</Type>
+  <Number>13524</Number>
+  <Date>2025-10-30</Date>
+  <Description>将胶浆、油墨、面料装填到对应工作站，按生产流程准备设备。</Description>
+  <Steps>
+    <Step id="1">
+      <Instruction>将面料裁片装入上料工作站</Instruction>
+      <Parameters>
+        <工作站>上料工作站</工作站>
+        <物料>裁片A</物料>
+        <数量>1000</数量>
+        <单位>片</单位>
+        <备注>用于后续丝印工序</备注>
+      </Parameters>
+    </Step>
+    <Step id="2">
+      <Instruction>将打底胶浆装入丝印工作站1</Instruction>
+      <Parameters>
+        <工作站>丝印工作站1</工作站>
+        <物料>打底胶浆</物料>
+        <色号>PANTONE White</色号>
+        <重量>300g</重量>
+        <备注>高遮盖力，厚刷5次</备注>
+      </Parameters>
+    </Step>
+    <Step id="3">
+      <Instruction>将功能胶浆装入丝印工作站2</Instruction>
+      <Parameters>
+        <工作站>丝印工作站2</工作站>
+        <物料>功能胶浆（深蓝）</物料>
+        <色号>PANTONE 288C</色号>
+        <重量>150g</重量>
+        <备注>深蓝色，厚刷3次</备注>
+      </Parameters>
+    </Step>
+    <Step id="4">
+      <Instruction>将功能胶浆装入丝印工作站3</Instruction>
+      <Parameters>
+        <工作站>丝印工作站3</工作站>
+        <物料>功能胶浆（深绿）</物料>
+        <色号>PANTONE 3425C</色号>
+        <重量>150g</重量>
+        <备注>深绿色，厚刷2次</备注>
+      </Parameters>
+    </Step>
+    <Step id="5">
+      <Instruction>将功能胶浆装入丝印工作站4</Instruction>
+      <Parameters>
+        <工作站>丝印工作站4</工作站>
+        <物料>功能胶浆（浅蓝）</物料>
+        <色号>PANTONE 290C</色号>
+        <重量>120g</重量>
+        <备注>浅蓝色，厚刷2次</备注>
+      </Parameters>
+    </Step>
+    <Step id="6">
+      <Instruction>将网点胶浆装入丝印工作站5</Instruction>
+      <Parameters>
+        <工作站>丝印工作站5</工作站>
+        <物料>网点胶浆（粉色）</物料>
+        <色号>PANTONE 1895C</色号>
+        <重量>100g</重量>
+        <备注>粉色网点，厚刷2次</备注>
+      </Parameters>
+    </Step>
+    <Step id="7">
+      <Instruction>将功能胶浆装入丝印工作站6</Instruction>
+      <Parameters>
+        <工作站>丝印工作站6</工作站>
+        <物料>功能胶浆（浅绿）</物料>
+        <色号>PANTONE 337C</色号>
+        <重量>120g</重量>
+        <备注>浅绿色，厚刷2次</备注>
+      </Parameters>
+    </Step>
+    <!-- 可继续为丝印工作站7~10添加类似步骤，如有需要 -->
+  </Steps>
+</DevicePreparationInstruction>
