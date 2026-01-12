@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+  <class>MainWindow</class>
+  <widget class="QMainWindow" name="MainWindow">
+    <property name="geometry">
+      <rect>
+        <x>0</x><y>0</y><width>1024</width><height>640</height>
+      </rect>
+    </property>
+    <property name="windowTitle">
+      <string>Versatile Robotics</string>
+    </property>
+    <widget class="QWidget" name="centralwidget">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+        <!-- Left Panel -->
+        <item>
+          <widget class="QWidget" name="leftPanel">
+            <property name="minimumWidth"><number>180</number></property>
+            <layout class="QVBoxLayout" name="btnLayout">
+              <item>
+                <widget class="QPushButton" name="btnImport">
+                  <property name="text"><string>生产任务</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnLayering">
+                  <property name="text"><string>网版设计</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnRoutine">
+                  <property name="text"><string>工艺路线</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnPrepare">
+                  <property name="text"><string>生产准备</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnMonitoring">
+                  <property name="text"><string>生产监控</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnEvaluation">
+                  <property name="text"><string>绩效评估</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <spacer name="verticalSpacer">
+                  <property name="orientation"><enum>Qt::Vertical</enum></property>
+                  <property name="sizeHint" >
+                    <size>
+                      <width>20</width><height>40</height>
+                    </size>
+                  </property>
+                </spacer>
+              </item>
+            </layout>
+          </widget>
+        </item>
+
+        <!-- Right stacked content area -->
+        <item>
+          <widget class="QStackedWidget" name="stackedRight">
+            <!-- Dynamic content -->
+          </widget>
+        </item>
+      </layout>
+    </widget>
+  </widget>
+  <resources/>
+  <connections/>
+</ui>

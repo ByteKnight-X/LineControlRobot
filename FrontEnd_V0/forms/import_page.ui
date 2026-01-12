@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ImportPage</class>
+ <widget class="QWidget" name="ImportPage">
+  <layout class="QHBoxLayout" name="mainHorizontalLayout">
+   <!-- Task editor panel (left, stretch = 1) -->
+   <item stretch="1">
+    <widget class="QWidget" name="taskPanel">
+     <layout class="QVBoxLayout" name="taskVerticalLayout">
+      <!-- Top: scrollable text area (stretch 10) -->
+      <item stretch="10">
+       <widget class="QScrollArea" name="instructionsScroll">
+        <property name="widgetResizable"><bool>true</bool></property>
+        <property name="styleSheet">
+         <string>border:1px solid #888888; background-color:white;</string>
+        </property>
+        <widget class="QWidget" name="instructionsWidget">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>1</horstretch><verstretch>1</verstretch>
+          </sizepolicy>
+         </property>
+         <layout class="QFormLayout" name="instructionsFormLayout"/>
+        </widget>
+       </widget>
+      </item>
+      <!-- Bottom: buttons (stretch 1) -->
+      <item stretch="1">
+       <layout class="QHBoxLayout" name="taskButtonsLayout">
+        <item stretch="1">
+         <widget class="QPushButton" name="btnSelectTask">
+          <property name="text"><string>导入任务单</string></property>
+          <property name="minimumHeight"><number>32</number></property>
+         </widget>
+        </item>
+        <item stretch="1">
+         <widget class="QPushButton" name="btnEditTask">
+          <property name="text"><string>编辑任务单</string></property>
+          <property name="minimumHeight"><number>32</number></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <!-- Design preview panel (right, stretch = 2) -->
+   <item stretch="2">
+    <widget class="QWidget" name="designPanel">
+     <layout class="QVBoxLayout" name="designVerticalLayout">
+      <!-- Top: SVG preview (stretch 10) -->
+      <item stretch="10">
+       <!-- patternDesign changed from QLabel to QWebEngineView -->
+       <widget class="QWebEngineView" name="patternDesign">
+        <property name="styleSheet">
+         <string>border:1px solid #888888; background-color:white;</string>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch><verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <!-- Bottom: Next button (stretch 1) -->
+      <item stretch="1">
+       <layout class="QHBoxLayout" name="nextButtonLayout">
+        <property name="spacing"><number>0</number></property>
+        <property name="alignment"><set>Qt::AlignHCenter</set></property>
+        <item>
+         <widget class="QPushButton" name="btnNextStep">
+          <property name="text"><string>下一步</string></property>
+          <property name="enabled"><bool>false</bool></property>
+          <property name="minimumSize">
+           <size><width>120</width><height>36</height></size>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget class="QWebEngineView" name="QWebEngineView">
+   <header>PyQt5.QtWebEngineWidgets</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

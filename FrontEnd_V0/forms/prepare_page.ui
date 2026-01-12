@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ProcessPlanningWidget</class>
+ <widget class="QWidget" name="ProcessPlanningWidget">
+  <layout class="QVBoxLayout" name="processMainLayout">
+   <!-- Top area: preparation instructions (left) and device instructions (right) -->
+   <item stretch="10">
+    <layout class="QHBoxLayout" name="topRowLayout">
+     <!-- Preparation instructions panel (left, 1:1) -->
+     <item stretch="1">
+      <widget class="QWidget" name="preparationPanel">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>1</horstretch><verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <layout class="QVBoxLayout" name="preparationVerticalLayout">
+        <!-- Top: buttons row (stretch 1) -->
+        <item stretch="1">
+         <layout class="QHBoxLayout" name="prepButtonsLayout">
+          <item>
+           <widget class="QPushButton" name="btnMeshPreparation">
+            <property name="text"><string>网版准备指令</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnInkPreparation">
+            <property name="text"><string>油墨胶浆准备指令</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnFabricPreparation">
+            <property name="text"><string>面料准备指令</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnEquipmentPreparation">
+            <property name="text"><string>设备准备指令</string></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <!-- Bottom: information area (stretch 5) -->
+        <item stretch="5">
+         <widget class="QScrollArea" name="prepInfoScroll">
+          <property name="widgetResizable"><bool>true</bool></property>
+          <widget class="QWidget" name="prepInfoContainer">
+           <layout class="QVBoxLayout" name="prepInfoLayout">
+            <item>
+             <widget class="QTextEdit" name="prepInfoText">
+              <property name="readOnly"><bool>true</bool></property>
+              <property name="placeholderText"><string>Preparation details will appear here.</string></property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>  <!-- 左侧 preparationPanel 结束 -->
+
+    </layout> <!-- 这里补：关闭 topRowLayout -->
+   </item>    <!-- 这里补：关闭上方整行 item (stretch="10") -->
+
+   <!-- Bottom control bar (stretch 1) -->
+   <item stretch="1">
+    <widget class="QWidget" name="controlBar_process">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch><verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>80</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout" name="controlLayout_process">
+      <item>
+       <spacer name="controlLeftSpacer">
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        <property name="sizeType"><enum>QSizePolicy::Expanding</enum></property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnEditPlan">
+        <property name="text"><string>编辑指令</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnStartScheduling">
+        <property name="text"><string>下一步</string></property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="controlRightSpacer">
+        <property name="orientation"><enum>Qt::Horizontal</enum></property>
+        <property name="sizeType"><enum>QSizePolicy::Expanding</enum></property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
