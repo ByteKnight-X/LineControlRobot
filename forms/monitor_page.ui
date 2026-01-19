@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Referenced files: [forms/main_window.ui](FrontEnd_V0/forms/main_window.ui) -->
+<ui version="4.0">
+ <class>MonitorPage</class>
+ <widget class="QWidget" name="MonitorPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1024</width>
+    <height>640</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="rootLayout">
+   <property name="margin">
+    <number>8</number>
+   </property>
+   <property name="spacing">
+    <number>8</number>
+   </property>
+
+   <!-- 区1：顶部 KPI / 订单 / 运行模式条 -->
+   <item>
+    <widget class="QFrame" name="kpiBar">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <layout class="QHBoxLayout" name="kpiBarLayout">
+      <property name="spacing">
+       <number>12</number>
+      </property>
+
+      <item>
+       <widget class="QLabel" name="lblOrderBatch">
+        <property name="text">
+         <string>订单：WO-2026-0114  批次：B12</string>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+       </widget>
+      </item>
+
+      <item>
+       <widget class="QLabel" name="lblRunModeWip">
+        <property name="text">
+         <string>运行模式：全线 / 分段组合   托盘：在制 18 / 总 30</string>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>320</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+
+      <item>
+       <widget class="QLabel" name="lblKpi">
+        <property name="text">
+         <string>节拍：38 s/托盘   产出：960 双/班   停机：2 次(近1h)   良率：—   OEE：—</string>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+
+     </layout>
+     <!-- 控制顶部高度 -->
+     <property name="maximumHeight">
+      <number>88</number>
+     </property>
+    </widget>
+   </item>
+
+   <!-- 区2 + 区3：主内容区，使用水平 QSplitter -->
+   <item>
+    <widget class="QSplitter" name="mainSplitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+
+     <!-- 左侧 child：lineOverviewPanel -->
+     <widget class="QWidget" name="lineOverviewPanel">
+      <property name="minimumSize">
+       <size>
+        <width>480</width>
+        <height>200</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="lineOverviewLayout">
+       <property name="spacing">
+        <number>8</number>
+       </property>
+
+       <item>
+        <widget class="QLabel" name="lblLineTitle">
+         <property name="text">
+          <string>线体概览（拓扑 + WIP + 工站状态）</string>
+         </property>
+         <property name="font">
+          <font>
+           <bold>true</bold>
+           <pointsize>11</pointsize>
+          </font>
+         </property>
+        </widget>
+       </item>
+
+       <item>
+        <widget class="QGraphicsView" name="lineMimicView">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>拓扑视图占位：支持托盘/WIP/状态叠加与自循环段指示</string>
+         </property>
+        </widget>
+       </item>
+
+       <item>
+        <widget class="QFrame" name="legendBar">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="maximumHeight">
+          <number>60</number>
+         </property>
+         <layout class="QHBoxLayout" name="legendLayout">
+          <item>
+           <widget class="QLabel" name="lblLegend">
+            <property name="text">
+             <string>图例：RUN / STOP / FAULT  |  Blocked / Starved  | 小标记表示“可自循环段（启用/停用）”</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+      </layout>
+     </widget>
+
+     <!-- 右侧 child：sidePanel (约占 25–30%) -->
+     <widget class="QWidget" name="sidePanel">
+      <property name="minimumSize">
+       <size>
+        <width>300</width>
+        <height>200</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="sidePanelLayout">
+       <property name="spacing">
+        <number>8</number>
+       </property>
+
+       <item>
+        <widget class="QLabel" name="lblSideTitle">
+         <property name="text">
+          <string>事件/报警 + 工站详情/指令</string>
+         </property>
+         <property name="font">
+          <font>
+           <bold>true</bold>
+           <pointsize>11</pointsize>
+          </font>
+         </property>
+        </widget>
+       </item>
+
+       <item>
+        <widget class="QGroupBox" name="grpEvents">
+         <property name="title">
+          <string>事件/报警（按优先级/时间）</string>
+         </property>
+         <layout class="QVBoxLayout" name="grpEventsLayout">
+          <item>
+           <widget class="QTableWidget" name="tblEvents">
+            <property name="columnCount">
+             <number>5</number>
+            </property>
+            <property name="rowCount">
+             <number>0</number>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="editTriggers">
+             <enum>QAbstractItemView::NoEditTriggers</enum>
+            </property>
+            <column>
+             <property name="text">
+              <string>优先级</string>
+             </property>
+            </column>
+            <horizontalHeaderItem>
+             <property name="text">
+              <string>时间</string>
+             </property>
+            </horizontalHeaderItem>
+            <horizontalHeaderItem>
+             <property name="text">
+              <string>来源工位</string>
+             </property>
+            </horizontalHeaderItem>
+            <horizontalHeaderItem>
+             <property name="text">
+              <string>简述</string>
+             </property>
+            </horizontalHeaderItem>
+            <horizontalHeaderItem>
+             <property name="text">
+              <string>确认</string>
+             </property>
+            </horizontalHeaderItem>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <item>
+        <widget class="QGroupBox" name="grpStationDetail">
+         <property name="title">
+          <string>选中工站详情 / 指令</string>
+         </property>
+         <layout class="QVBoxLayout" name="grpStationLayout">
+          <item>
+           <widget class="QLabel" name="lblStationName">
+            <property name="text">
+             <string>选中工站：丝印3</string>
+            </property>
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblStationState">
+            <property name="text">
+             <string>状态：RUN  近5min节拍：39s</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblRecipe">
+            <property name="text">
+             <string>当前工艺：网版#1 / 胶浆A / 厚度1.0mm</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblParams">
+            <property name="text">
+             <string>自动参数：刮刀角65° 压力22N 速度180mm/s</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblCount">
+            <property name="text">
+             <string>托盘计数：已处理 124 托盘（本班）</string>
+            </property>
+           </widget>
+          </item>
+
+          <!-- 指令区 -->
+          <item>
+           <widget class="QGroupBox" name="cmdBox">
+            <property name="title">
+             <string>指令</string>
+            </property>
+            <layout class="QVBoxLayout" name="cmdLayout">
+             <item>
+              <widget class="QPushButton" name="btnToggleLoop">
+               <property name="text">
+                <string>启用/停用该段自循环</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnChangeRecipe">
+               <property name="text">
+                <string>更换工艺配方（Recipe ID）</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnResetAlarm">
+               <property name="text">
+                <string>复位报警</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnCallAssist">
+               <property name="text">
+                <string>请求人工干预</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+
+         </layout>
+        </widget>
+       </item>
+
+       <!-- spacer to push content to top -->
+       <item>
+        <spacer name="sideBottomSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+
+      </layout>
+     </widget>
+
+     <!-- initial splitter sizes to approximate left: right = 3:1 -->
+     <property name="sizes">
+      <list>
+       <number>900</number>
+       <number>300</number>
+      </list>
+     </property>
+
+    </widget>
+   </item>
+
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

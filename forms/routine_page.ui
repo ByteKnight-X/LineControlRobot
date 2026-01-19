@@ -6,60 +6,6 @@
    <!-- Top area: preparation instructions (left) and device instructions (right) -->
    <item stretch="10">
     <layout class="QHBoxLayout" name="topRowLayout">
-     <!-- Preparation instructions panel (left, 1:1) -->
-     <item stretch="1">
-      <widget class="QWidget" name="preparationPanel">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>1</horstretch><verstretch>1</verstretch>
-        </sizepolicy>
-       </property>
-       <layout class="QVBoxLayout" name="preparationVerticalLayout">
-        <!-- Top: buttons row (stretch 1) -->
-        <item stretch="1">
-         <layout class="QHBoxLayout" name="prepButtonsLayout">
-          <item>
-           <widget class="QPushButton" name="btnMeshPreparation">
-            <property name="text"><string>网版准备指令</string></property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="btnInkPreparation">
-            <property name="text"><string>油墨胶浆准备指令</string></property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="btnFabricPreparation">
-            <property name="text"><string>面料准备指令</string></property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="btnEquipmentPreparation">
-            <property name="text"><string>设备准备指令</string></property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <!-- Bottom: information area (stretch 5) -->
-        <item stretch="5">
-         <widget class="QScrollArea" name="prepInfoScroll">
-          <property name="widgetResizable"><bool>true</bool></property>
-          <widget class="QWidget" name="prepInfoContainer">
-           <layout class="QVBoxLayout" name="prepInfoLayout">
-            <item>
-             <widget class="QTextEdit" name="prepInfoText">
-              <property name="readOnly"><bool>true</bool></property>
-              <property name="placeholderText"><string>Preparation details will appear here.</string></property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-
      <!-- Device instructions panel (right, 1:1) -->
      <item stretch="2">
       <widget class="QWidget" name="devicePanel">
@@ -115,8 +61,8 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnStartScheduling">
-        <property name="text"><string>分发指令</string></property>
+       <widget class="QPushButton" name="btnNextStep">
+        <property name="text"><string>下一步</string></property>
        </widget>
       </item>
       <item>

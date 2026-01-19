@@ -6,7 +6,8 @@ from utilities.constants import STYLE
 from import_page import ImportPage
 from layering_page import LayeringPage
 from routine_page import RoutinePage
-
+from prepare_page import PreparePage
+from monitor_page import MonitorPage
 
 class MainWindow(QtWidgets.QMainWindow):
     """Main application window that manages different screens."""
@@ -23,7 +24,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btnImport.clicked.connect(lambda: self.show_page('import_page', self.btnImport))
         self.btnLayering.clicked.connect(lambda: self.show_page('layering_page', self.btnLayering))
         self.btnRoutine.clicked.connect(lambda: self.show_page('routine_page', self.btnRoutine))
-        # self.btnMonitoring.clicked.connect(lambda: self.show_page('monitoring_page', self.btnMonitoring))
+        self.btnMonitoring.clicked.connect(lambda: self.show_page('monitoring_page', self.btnMonitoring))
         # self.btnEvaluation.clicked.connect(lambda: self.show_page('evaluation_page', self.btnEvaluation))
 
         self.show_page('import_page', self.btnImport)
@@ -36,10 +37,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 page = ImportPage(controller=self)
             elif page_name == 'layering_page':
                 page = LayeringPage(controller=self)
+            elif page_name == 'prepare_page':
+                page = PreparePage(controller=self)
             elif page_name == 'routine_page':
                 page = RoutinePage(controller=self)
             elif page_name == 'monitoring_page':
-                pass  # To be implemented
+                page = MonitorPage(controller=self)
             elif page_name == 'evaluation_page':
                 pass  # To be implemented
             else:

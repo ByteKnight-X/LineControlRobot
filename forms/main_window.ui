@@ -36,6 +36,12 @@
                 </widget>
               </item>
               <item>
+                <widget class="QPushButton" name="btnPrepare">
+                  <property name="text"><string>生产准备</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
                 <widget class="QPushButton" name="btnMonitoring">
                   <property name="text"><string>生产监控</string></property>
                   <property name="checkable"><bool>true</bool></property>
