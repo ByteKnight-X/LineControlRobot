@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QGraphicsSimpleTextItem
 
 class PreparePage(QtWidgets.QWidget):
     """Routine page."""
-
+    
     def __init__(self, controller):
         super().__init__()
         uic.loadUi("forms/prepare_page.ui", self)
@@ -30,6 +30,7 @@ class PreparePage(QtWidgets.QWidget):
 
         # Initial state: keep behavior consistent and show equipment preparation with highlight
         self.on_click_equipment_prep()
+
 
     def show_equipment_preparation(self):
         """Render equipment preparation from controller.context['prep_instructions'] (fallback to local XML)."""
@@ -147,57 +148,22 @@ class PreparePage(QtWidgets.QWidget):
 
     def show_ink_preparation(self):
         """Render ink/paste preparation from context (fallback to local XML)."""
-        try:
-            prep = self._get_prep_from_context()
-            if prep:
-                lines = []
-                items = prep.get("inkPastePrepInstructions") or prep.get("ink_paste_prep_instructions") or []
-                for idx, it in enumerate(items, start=1):
-                    lines.append(f"【步骤 {idx}】 油墨/胶浆准备")
-                    if it.get("screenId"):
-                        lines.append(f"    网版ID: {it.get('screenId')}")
-                    if it.get("colorCode") or it.get("color_code"):
-                        lines.append(f"    色号: {it.get('colorCode') or it.get('color_code')}")
-                    if it.get("weight"):
-                        lines.append(f"    重量: {it.get('weight')}")
-                    if it.get("materialType") or it.get("material_type"):
-                        lines.append(f"    类型: {it.get('materialType') or it.get('material_type')}")
-                    if it.get("remark"):
-                        lines.append(f"    备注: {it.get('remark')}")
-                    lines.append("")
-                self.prepInfoText.setPlainText("\n".join(lines))
-                return
-        except Exception:
-            pass
-        # fallback to XML loader
-        xml_path = Path(__file__).resolve().parent / "resource" / "human_instructions" / "胶浆油墨准备指令.xml"
-        try:
-            tree = ET.parse(str(xml_path))
-            root = tree.getroot()
-            ns = {'ns': 'urn:linecontrol:screen-prep'}
-            steps = root.find(".//ns:Steps", ns)
-            if steps is None:
-                self.prepInfoText.setPlainText("未找到胶浆油墨准备指令内容。")
-                return
+        prep = self.controller.context["prep_instructions"]
+        if prep:
             lines = []
-            for step in steps.findall("ns:Step", ns):
-                sid = step.get("id", "")
-                instr = step.findtext("ns:Instruction", "", ns)
-                params = step.find("ns:Parameters", ns)
-                lines.append(f"【步骤 {sid}】{instr}")
-                if params is not None:
-                    for p in params:
-                        tag = p.tag.split('}', 1)[-1]
-                        val = p.text
-                        if tag in ("色号", "重量", "类型"):
-                            lines.append(f"    {tag}: {val}  ←")
-                        else:
-                            lines.append(f"    {tag}: {val}")
-                lines.append("")  # Blank line separator
-            text = "\n".join(lines)
-            self.prepInfoText.setPlainText(text)
-        except Exception as e:
-            self.prepInfoText.setPlainText(f"胶浆油墨准备指令加载失败：{e}")
+            items = prep.get("inkPastePrepInstructions")
+            for idx, it in enumerate(items, start=1):
+                color_code = it.get('colorCode')
+                weight = it.get('weight')
+                material_type = it.get('materialType')
+                remark = it.get('remark')
+                lines.append(
+                    f"【步骤 {idx}】 {material_type}准备:\n-色号: {color_code}\n-重量: {weight}\n-备注: {remark}\n"
+                ) 
+            self.prepInfoText.setPlainText("\n".join(lines))
+        return
+
+        
 
     def show_mesh_preparation(self):
         """Render screen preparation from context (fallback to local XML)."""

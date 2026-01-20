@@ -358,13 +358,13 @@ class RoutinePage(QtWidgets.QWidget):
         super().resizeEvent(event)
     
     def next_step(self):
-        """Proceed to the next step in the workflow."""
-        layering = self.controller.context.get("layering_data") or {}
+        """Proceed to the next step in the workflow."""        
+        layering = self.controller.context.get("layering_data")
         task_id = layering.get("task_id")
         if not task_id:
             QMessageBox.warning(self, "缺少 task_id", "未找到 task_id，无法确认工艺路线。")
             return
-
+        
         url = f"http://127.0.0.1:8000/tasks/{task_id}/generate_prep"
         payload = {
             "approved": True,
@@ -372,6 +372,7 @@ class RoutinePage(QtWidgets.QWidget):
             "separation_plan": layering.get("separationPlan"),
             "sop": layering.get("sop"),
         }
+                
         try:
             resp = requests.post(url, json=payload, timeout=10)
         except Exception as exc:
@@ -384,14 +385,14 @@ class RoutinePage(QtWidgets.QWidget):
 
         try:
             data = resp.json()
-            # store full response for later pages (prep instructions, etc.)
-            self.controller.context["prep_instructions"] = data
-            pretty = json.dumps(data, ensure_ascii=False, indent=2)
-            QMessageBox.information(self, "工艺路线确认成功", pretty)
+            self.controller.context["prep_instructions"] = data['prepInstructions']
+            
+            print(f"aabb {self.controller.context["prep_instructions"]}")
+            
+            print(f"ttxx {self.controller.context["sop"]}")
+            
         except Exception:
-            self.controller.context["prep_instructions"] = resp.text
-            QMessageBox.information(self, "工艺路线确认成功", resp.text)
+            QMessageBox.information(self, "工艺路线确认错误", resp.text)
 
         # navigate to prepare page
-        print(f"{self.controller.context["prep_instructions"]}")
         self.controller.show_page("prepare_page", self.controller.btnPrepare)

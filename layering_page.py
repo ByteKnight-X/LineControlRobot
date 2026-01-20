@@ -18,12 +18,8 @@ class LayeringPage(QtWidgets.QWidget):
         super().__init__()
         uic.loadUi("forms/layering_page.ui", self)
         self.controller = controller
-        layering = controller.context.get("layering_data") or {}
-
-        self.layer_data = layering.get("separationPlan") or layering.get("separation_plan") or []
-        # SOP 必须准备好给 GenerateRouteRequest(alias="SOP")
-        self.sop_data = layering.get("sop") or layering.get("SOP") or []
-
+        self.separation_plan = controller.context.get("separation_plan")
+        self.sop = controller.context.get("sop")     
         self.current_index = 0
         self._params_editing = False
         self.setup_ui()
@@ -37,16 +33,17 @@ class LayeringPage(QtWidgets.QWidget):
         self.btnNextLayer.clicked.connect(self.show_next)
         self.btnNextStep.clicked.connect(self.next_step)
 
-        # connect edit/save params
+        # Connect edit/save params
         self.btnEditParams.clicked.connect(self._on_edit_params)
         self.btnSaveParams.clicked.connect(self._on_save_params)
 
+        # Initialize mesh data
         self.populate_thumbnails()
         self.refresh_display()
 
 
-    # helper: pick first non-empty key variant from entry dict
     def _get_field(self, entry: dict, *keys):
+        """"""
         if not isinstance(entry, dict):
             return None
         for k in keys:
@@ -405,12 +402,12 @@ class LayeringPage(QtWidgets.QWidget):
         self.refresh_display()
 
     def next_step(self) -> None:
-        layering = self.controller.context.get("layering_data") or {}
+        layering = self.controller.context.get("layering_data")
         task_id = layering.get("task_id")
         if not task_id:
             QtWidgets.QMessageBox.warning(self, "缺少 task_id", "未找到 task_id，无法生成工艺路线。")
             return
-
+        
         # GenerateRouteRequest: separationPlan + SOP 必填
         payload = {
             "approved": True,

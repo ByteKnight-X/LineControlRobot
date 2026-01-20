@@ -85,7 +85,6 @@ class ImportPage(QtWidgets.QWidget):
     """
     Interface for importing production task files and design documents.
     """
-
     def __init__(self, controller):
         """
         Load UI and initialize the import page with the given controller.
@@ -223,9 +222,11 @@ class ImportPage(QtWidgets.QWidget):
         self._layering_thread.finished.connect(self._layering_thread.deleteLater)
         self._layering_thread.start()
 
-    def _on_layering_success(self, data: dict) -> None:
+    def _on_layering_success(self, message: dict) -> None:
         """Switch to the layering page on successful response."""
-        self.controller.context["layering_data"] = data
+        self.controller.context["task_id"] = message.get("taskId")
+        self.controller.context["separation_plan"] = message.get("separationPlan")
+        self.controller.context["sop"] = message.get("sop")          
         self.controller.show_page('layering_page', self.controller.btnLayering)
         self.btnNextStep.setEnabled(True)
 
