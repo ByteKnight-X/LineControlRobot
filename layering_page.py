@@ -42,46 +42,32 @@ class LayeringPage(QtWidgets.QWidget):
         self.refresh_display()
 
 
-    def _get_field(self, entry: dict, *keys):
-        """"""
-        if not isinstance(entry, dict):
-            return None
-        for k in keys:
-            v = entry.get(k)
-            if v is not None and v != "":
-                return v
-        return None
-
     def populate_thumbnails(self) -> None:
         """
-        Populate directoryPanel from self.layer_data (list of dicts returned by backend).
+        Populate directoryPanel from self.separation_plan (list of dicts returned by backend).
         Resolves Windows absolute paths by basename lookup under resource/layers, supports
         POSIX absolute and project-relative paths. Displays name and optional icon.
         """
         # Clear existing
         self.thumbnailsList.clear()
-        if not isinstance(self.layer_data, list):
-            return
 
+        # Render entries
         project_root = Path(__file__).resolve().parent
         thumb_size = QSize(120, 90)
 
-        for i, entry in enumerate(self.layer_data):
+        for idx, entry in enumerate(self.separation_plan):
             # Entry expected to be a dict with keys like 'index' and 'imagePath'
-            idx = i
-            layer_idx = self._get_field(entry, "index", "layer_index")
-            raw_path = self._get_field(entry, "imagePath", "image_path", "image") or ""
-
-            # Normalize separators and treat leading "/" as project-relative
+            layer_idx = entry.get("index")
+            raw_path = entry.get("imagePath")
+            
+            # Normalize Windows / Mac path string
             s = str(raw_path).strip().strip('"').replace("\\", "/")
             if s.startswith("/") and not s.startswith("//"):
                 s = s.lstrip("/")
-
-            # Determine basename and attempt to resolve to a local file
+                
             basename = Path(s).name
             candidate = None
 
-            # Detect Windows drive like "C:/..." or UNC and try basename lookup
             if re.match(r"^[A-Za-z]:/", s) or s.startswith("//") or s.startswith("\\\\"):
                 candidates = [
                     project_root / "resource" / "layers" / basename,
@@ -113,15 +99,9 @@ class LayeringPage(QtWidgets.QWidget):
                                     candidate = f.resolve()
                                     break
 
-            # Prepare display name: prefer provided index + stem (e.g. "0_胶浆")
-            name = Path(s).stem or basename or f"layer{i+1}"
-            if layer_idx is not None:
-                display_name = f"{layer_idx}_{name}"
-            else:
-                display_name = name or f"Layer {i+1}"
-
+            display_name = f"layer{layer_idx+1}"
             itm = QtWidgets.QListWidgetItem(display_name)
-            itm.setData(Qt.UserRole, idx)
+            itm.setData(Qt.UserRole, layer_idx)
             itm.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
             # Set icon if resolved file exists and is loadable
@@ -144,28 +124,28 @@ class LayeringPage(QtWidgets.QWidget):
         self.thumbnailsList.itemClicked.connect(self._on_directory_item_clicked)
 
         # Keep selection in sync
-        if self.layer_data:
-            row = min(getattr(self, "current_index", 0), len(self.layer_data) - 1)
+        if self.separation_plan:
+            row = min(getattr(self, "current_index", 0), len(self.separation_plan) - 1)
             self.thumbnailsList.setCurrentRow(row)
             self.current_index = row
 
     def _on_directory_item_clicked(self, item: QtWidgets.QListWidgetItem) -> None:
         idx = item.data(Qt.UserRole)
-        if isinstance(idx, int) and 0 <= idx < len(self.layer_data):
+        if isinstance(idx, int) and 0 <= idx < len(self.separation_plan):
             self.current_index = idx
             self.refresh_display()
 
     def refresh_display(self) -> None:
         """Render current SVG (path or bytes) into layerPreview (QWebEngineView)."""
-        total = len(self.layer_data) if isinstance(self.layer_data, list) else 0
+        total = len(self.separation_plan) if isinstance(self.separation_plan, list) else 0
         if total == 0:
             self.layerPreview.setHtml("<html><body></body></html>", QUrl("about:blank"))
             self.layerIndexLabel.setText("0 / 0")
             return
 
-        entry = self.layer_data[self.current_index]
+        entry = self.separation_plan[self.current_index]
         if isinstance(entry, dict):
-            item = self._get_field(entry, "imagePath", "image_path", "image") or ""
+            item = entry.get("imagePath")
         else:
             item = entry
 
@@ -303,23 +283,23 @@ class LayeringPage(QtWidgets.QWidget):
             return int(val) if val.isdigit() else float(val)
 
         out = {}
-        for i, entry in enumerate(self.layer_data):
+        for i, entry in enumerate(self.separation_plan):
             if isinstance(entry, dict):
-                raw_path = self._get_field(entry, "imagePath", "image_path", "image") or ""
+                raw_path = entry.get("imagePath")
                 s = str(raw_path).strip().replace("\\", "/")
                 if s.startswith("/") and not s.startswith("//"):
                     s = s.lstrip("/")
                 name = Path(s).stem if s else f"layer{i}"
-                key = f"{i}_{name}"
+                key = f"{i}_{name}"                
                 out[key] = {
-                    "material": self._get_field(entry, "material") or "",
-                    "model": self._get_field(entry, "model") or "",
-                    "wire_diameter": _num(self._get_field(entry, "lineDiameter", "line_diameter", "wire_diameter", "wire") or ""),
-                    "pulling_method": self._get_field(entry, "drawingMethod", "drawing_method", "pulling_method") or "",
-                    "pulling_angle": self._get_field(entry, "drawAngle", "draw_angle", "pulling_angle"),
-                    "mesh_count": _num(self._get_field(entry, "mesh_count", "mesh", "目数", "count") or ""),
-                    "tension": _num(self._get_field(entry, "tension", "pull") or ""),
-                    "frame_model": self._get_field(entry, "netFrameSpecification", "net_frame_specification", "frame_model") or "",
+                    "material": entry.get("material"),
+                    "model": entry.get("model"),
+                    "wire_diameter": float(entry.get("lineDiameter")),
+                    "pulling_method": entry.get("drawingMethod"),
+                    "pulling_angle": entry.get("drawAngle"),
+                    "mesh_count": int(entry.get("count")),
+                    "tension": float(entry.get("tension")),
+                    "frame_model": entry.get("netFrameSpecification"),
                 }
             else:
                 name = Path(str(entry)).stem
@@ -331,23 +311,27 @@ class LayeringPage(QtWidgets.QWidget):
         """
         Show the previous layer.
         """
-        if not self.layer_data:
+        if not self.separation_plan:
             return
-        self.current_index = (self.current_index - 1) % len(self.layer_data)
+        self.current_index = (self.current_index - 1) % len(self.separation_plan)
+        self.thumbnailsList.setCurrentRow(self.current_index)
         self.refresh_display()
 
     def show_next(self) -> None:
         """
         Show the next layer.
         """
-        if not self.layer_data:
+        if not self.separation_plan:
             return
-        self.current_index = (self.current_index + 1) % len(self.layer_data)
+        self.current_index = (self.current_index + 1) % len(self.separation_plan)
+        self.thumbnailsList.setCurrentRow(self.current_index)
         self.refresh_display()
     
     def _set_params_editable(self, editable: bool) -> None:
+        """
+        Enable or disable editing of mesh params fields.
+        """
         self._params_editing = editable
-        # line edits
         for w in (
             self.materialLineEdit,
             self.modelLineEdit,
@@ -358,61 +342,53 @@ class LayeringPage(QtWidgets.QWidget):
             self.frameModelLineEdit,
         ):
             w.setReadOnly(not editable)
-        # combo
         self.pullingMethodCombo.setEnabled(editable)
-
         self.btnSaveParams.setEnabled(editable)
 
     def _on_edit_params(self) -> None:
+        """
+        Enable editing of mesh params.
+        """
         self._set_params_editable(True)
 
     def _on_save_params(self) -> None:
-        if not isinstance(self.layer_data, list) or not (0 <= self.current_index < len(self.layer_data)):
+        """
+        Save edited mesh params back to self.separation_plan and disable editing.
+        """
+        if not isinstance(self.separation_plan, list) or not (0 <= self.current_index < len(self.separation_plan)):
             return
-        entry = self.layer_data[self.current_index]
+        entry = self.separation_plan[self.current_index]
         if not isinstance(entry, dict):
             return
-
-        def _int_or_none(s):
-            try:
-                ss = str(s).strip()
-                return int(ss) if ss != "" else None
-            except Exception:
-                return None
-
-        # 写回后端 MeshInfo 认可的字段名（注意别名）
-        entry["material"] = self.materialLineEdit.text().strip()
-        entry["model"] = self.modelLineEdit.text().strip()
-        entry["lineDiameter"] = self.wireDiameterLineEdit.text().strip()
-        entry["drawingMethod"] = self.pullingMethodCombo.currentText().strip()
-        entry["drawAngle"] = _int_or_none(self.pullingAngleLineEdit.text())
-        entry["tension"] = self.tensionLineEdit.text().strip()
-        entry["netFrameSpecification"] = self.frameModelLineEdit.text().strip()
-
-        # 这里 UI 的“目数”后端 MeshInfo 没有 meshCount 字段；先落到 count（Optional[int]）
-        entry["count"] = _int_or_none(self.meshCountLineEdit.text())
-
-        # 同步回 context，便于后续页面/重进时还原
-        layering = self.controller.context.get("layering_data") or {}
-        layering["separationPlan"] = self.layer_data
-        layering["sop"] = self.sop_data
-        self.controller.context["layering_data"] = layering
-
+        entry = {
+            "material": self.materialLineEdit.text().strip(),
+            "model": self.modelLineEdit.text().strip(),
+            "lineDiameter": self.wireDiameterLineEdit.text().strip(),
+            "drawingMethod": self.pullingMethodCombo.currentText().strip(),
+            "drawAngle": int(self.pullingAngleLineEdit.text()),
+            "tension": self.tensionLineEdit.text().strip(),
+            "netFrameSpecification": self.frameModelLineEdit.text().strip(),
+            "count": int(self.meshCountLineEdit.text()),
+        }
+        self.separation_plan[self.current_index] = entry
+        self.controller.context["separationPlan"] = self.separation_plan
         self._set_params_editable(False)
         self.refresh_display()
 
     def next_step(self) -> None:
-        layering = self.controller.context.get("layering_data")
-        task_id = layering.get("task_id")
+        """
+        Start routing inference.
+        """
+        task_id = self.controller.context.get("task_id")
         if not task_id:
             QtWidgets.QMessageBox.warning(self, "缺少 task_id", "未找到 task_id，无法生成工艺路线。")
             return
         
-        # GenerateRouteRequest: separationPlan + SOP 必填
+        # GenerateRouteRequest: separationPlan + sop
         payload = {
             "approved": True,
-            "separationPlan": self.layer_data,
-            "SOP": self.sop_data,
+            "separationPlan": self.separation_plan,
+            "sop": self.sop,
         }
 
         url = f"http://127.0.0.1:8000/tasks/{task_id}/generate_route"
@@ -426,16 +402,11 @@ class LayeringPage(QtWidgets.QWidget):
             QtWidgets.QMessageBox.critical(self, "生成失败", f"状态码: {resp.status_code}\n{resp.text}")
             return
 
+        # Fill context with response data
         data = resp.json()
-
-        # 后端 GenerateRouteResponse 字段是 route（不是 processRouteXml）
-        self.controller.context["route"] = data.get("route", "")
-
-        # 也把最新 separationPlan/sop 回填，保持一致
-        layering["separationPlan"] = data.get("separationPlan", self.layer_data)
-        layering["sop"] = data.get("sop", self.sop_data)
-        self.controller.context["layering_data"] = layering
-
+        self.controller.context["route"] = data.get("route")
+        self.controller.context["sop"] = self.sop
+        self.controller.context["separation_plan"] = self.separation_plan        
         self.controller.show_page("routine_page", self.controller.btnRoutine)
 
 

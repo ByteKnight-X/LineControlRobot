@@ -226,7 +226,7 @@ class ImportPage(QtWidgets.QWidget):
         """Switch to the layering page on successful response."""
         self.controller.context["task_id"] = message.get("taskId")
         self.controller.context["separation_plan"] = message.get("separationPlan")
-        self.controller.context["sop"] = message.get("sop")          
+        self.controller.context["sop"] = message.get("sop")                          
         self.controller.show_page('layering_page', self.controller.btnLayering)
         self.btnNextStep.setEnabled(True)
 

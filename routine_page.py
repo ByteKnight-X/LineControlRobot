@@ -72,10 +72,11 @@ class RoutinePage(QtWidgets.QWidget):
         self.btnNextStep.clicked.connect(self.next_step)
 
     def create_flow(self) -> None:
-        """Load production_line.xml and render flow graph with loops in flowGraphicsView.
-        蛇形布局：每行最多5个节点，奇偶行反向排列。
-        Loop的矩形框需包含所有loop路径上的节点。
+        """        
+        Render flow graph with loops. Each line contains up to 5 nodes, alternating direction for odd/even rows. 
+        Loop boxes enclose all nodes in the loop path.
         """
+        # Initialize 
         scene = QGraphicsScene(self)
         self.flowGraphicsView.setScene(scene)
         self.flowGraphicsView.setRenderHint(QPainter.Antialiasing)
@@ -122,24 +123,24 @@ class RoutinePage(QtWidgets.QWidget):
             "下料工作站": "#9C27B0"
         }
 
-        # 蛇形布局参数
+        # Snake-like layout parameters
         node_w, node_h = 280, 120
         gap_x = 200
         gap_y = 120
         start_x = 80
 
-        total_nodes = len(nodes_data)
         max_per_row = 7
-        start_y = 40  # 顶部内边距
+        start_y = 40  # Top padding
 
         node_items = {}
         node_positions = {}
 
+        # Render nodes in snake-like layout
         ordered_ids = list(nodes_data.keys())
         for i, nid in enumerate(ordered_ids):
             row = i // max_per_row
             col = i % max_per_row
-            # 左上起点，奇偶行蛇形
+            # Top-left origin, snake-like layout for odd/even rows
             if row % 2 == 0:
                 x = start_x + col * (node_w + gap_x)
             else:
@@ -155,7 +156,7 @@ class RoutinePage(QtWidgets.QWidget):
             node_items[nid] = node_item
             node_positions[nid] = rect.center()
 
-            # 在每个节点上方显示id
+            # Display node id above each node
             id_text = QGraphicsSimpleTextItem(str(nid), node_item)
             font = id_text.font()
             font.setPointSize(12)
@@ -167,8 +168,8 @@ class RoutinePage(QtWidgets.QWidget):
                 rect.x() + (rect.width() - id_rect.width()) / 2,
                 rect.y() - id_rect.height() - 4
             )
-        # --- Loop分组：收集所有loop边，按loop分组，找到loop路径上的所有节点 ---
-        # 1. 找所有loop边，按loopCount分组
+        # --- Loop grouping: collect all loop edges, group by loopCount, find all nodes on loop paths ---
+        # 1. Find all loop edges, group by loopCount
         loop_edges = []
         forward_edges = []
         for e in edges_data:
@@ -177,7 +178,7 @@ class RoutinePage(QtWidgets.QWidget):
             elif e.get("edgeType") == "forward":
                 forward_edges.append(e)
 
-        # 2. 构建 forward 邻接表（假定主干为线性或每节点至多一条 forward 出边）
+        # 2. Build forward adjacency maps
         fwd_next = {}   # node_id -> next_node_id
         fwd_prev = {}   # node_id -> prev_node_id
         for e in forward_edges:
@@ -185,8 +186,8 @@ class RoutinePage(QtWidgets.QWidget):
             fwd_next[s] = t
             fwd_prev[t] = s
 
-        # 3. 对每个 loop 边，沿 forward 从 tgt 走到 src，收集所有节点（包含端点）
-        loop_groups = []  # 每项: {"nodes": [id, ...], "loopCount": N}
+        # 3. Collect all nodes in each loop path
+        loop_groups = []  # Each item: {"nodes": [id, ...], "loopCount": N}
         visited_loops = set()
         for e in loop_edges:
             src, tgt, lcount = e["source"], e["target"], e["loopCount"]
@@ -198,15 +199,15 @@ class RoutinePage(QtWidgets.QWidget):
             safety = 0
             max_steps = len(nodes_data) + 5
 
-            # 先从 tgt 开始，沿 forward 累加直到到达 src 或终止
+            # Start from tgt, accumulate along forward until reaching src or termination
             while cur is not None and safety < max_steps:
                 path_nodes.append(cur)
                 if cur == src:
                     break
-                cur = fwd_next.get(cur)  # 顺主干向前
+                cur = fwd_next.get(cur)  # Move forward along main path
                 safety += 1
 
-            # 如果没能到达 src（可能因数据不线性），尝试从 src 逆向找回 tgt
+            # If unable to reach src (possibly due to non-linear data), try reverse from src to find tgt
             if path_nodes and path_nodes[-1] != src:
                 path_nodes = []
                 cur = src
@@ -215,19 +216,19 @@ class RoutinePage(QtWidgets.QWidget):
                     path_nodes.append(cur)
                     if cur == tgt:
                         break
-                    cur = fwd_prev.get(cur)  # 逆主干向后
+                    cur = fwd_prev.get(cur)  # Move backward along main path
                     safety += 1
-                # 逆向得到的是 src→...→tgt，翻转为 tgt→...→src
+                # Reverse obtained path from src→...→tgt to tgt→...→src
                 path_nodes.reverse()
 
-            # 兜底：若仍不包含两端点，则至少记录 [tgt, src]
+            # Fallback: if still not containing both endpoints, at least record [tgt, src]
             if not path_nodes or path_nodes[0] != tgt or path_nodes[-1] != src:
                 path_nodes = [tgt, src]
 
             loop_groups.append({"nodes": path_nodes, "loopCount": lcount})
             visited_loops.add((src, tgt))
 
-        # --- 画forward边 ---
+        # --- Draw forward edges ---
         for e in forward_edges:
             src_id = e["source"]
             tgt_id = e["target"]
@@ -247,7 +248,7 @@ class RoutinePage(QtWidgets.QWidget):
                 p2 = QPointF(tgt_rect.right(), tgt_rect.center().y())
             self._draw_arrow(scene, p1, p2, QColor("#333"), 4)
 
-        # --- 画loop分组的矩形框（包含所有loop路径节点） ---
+        # --- Draw loop group rectangles (containing all loop path nodes) ---
         for group in loop_groups:
             node_ids = group["nodes"]
             lcount = group["loopCount"]
@@ -274,7 +275,7 @@ class RoutinePage(QtWidgets.QWidget):
                          loop_rect.top() - label_rect.height() - 5)
             scene.addItem(label)
 
-        # 缩放流程图，占满整个视图
+        # Scale flowchart to fill the entire view
         self.flowGraphicsView.scale(0.5, 0.5)
 
     def _draw_arrow(self, scene, p1: QPointF, p2: QPointF, color: QColor, width: int):
@@ -355,24 +356,53 @@ class RoutinePage(QtWidgets.QWidget):
         return super().eventFilter(obj, event)
 
     def resizeEvent(self, event):
+        """Maintain current zoom level on resize."""
         super().resizeEvent(event)
     
+    def _split_list(self, s):
+        """Split a string or list into a cleaned list using '|' or ',' as separators."""
+        if not s:
+            return []
+        if isinstance(s, str):
+            for ch in ("，", "、", "；", ";"):
+                s = s.replace(ch, ",")
+            sep = "|" if "|" in s else ","
+            return [p.strip() for p in s.split(sep) if p.strip()]
+        if isinstance(s, list):
+            return s
+        return [s]
+    
+    def _normalize_quantities(self, raw):
+        """Normalize quantity values into a list with ints when possible."""
+        items = self._split_list(raw)
+        return [int(x) if str(x).isdigit() else x for x in items]
+    
     def next_step(self):
-        """Proceed to the next step in the workflow."""        
-        layering = self.controller.context.get("layering_data")
-        task_id = layering.get("task_id")
+        """Proceed to the next step in the workflow."""
+        task_id = self.controller.context.get("task_id")
         if not task_id:
             QMessageBox.warning(self, "缺少 task_id", "未找到 task_id，无法确认工艺路线。")
             return
         
+        # Call backend API to confirm routine
         url = f"http://127.0.0.1:8000/tasks/{task_id}/generate_prep"
+        
+        raw_size_ranges = self.controller.context.get("work_order").get("码段")
+        raw_quantities = self.controller.context.get("work_order").get("数量")
+        
         payload = {
             "approved": True,
             "route": self.controller.context.get("route"),
-            "separation_plan": layering.get("separationPlan"),
-            "sop": layering.get("sop"),
+            "separationPlan": self.controller.context.get("separation_plan"),
+            "sop": self.controller.context.get("sop"),
+            "sku": self.controller.context.get("work_order").get("货号"),
+            "sizeRanges": self._split_list(raw_size_ranges),
+            "quantities": self._normalize_quantities(raw_quantities),
         }
-                
+             
+        
+        print(f"aaff {payload}")
+           
         try:
             resp = requests.post(url, json=payload, timeout=10)
         except Exception as exc:
@@ -383,16 +413,9 @@ class RoutinePage(QtWidgets.QWidget):
             QMessageBox.critical(self, "确认失败", f"状态码: {resp.status_code}\n{resp.text}")
             return
 
-        try:
-            data = resp.json()
-            self.controller.context["prep_instructions"] = data['prepInstructions']
-            
-            print(f"aabb {self.controller.context["prep_instructions"]}")
-            
-            print(f"ttxx {self.controller.context["sop"]}")
-            
-        except Exception:
-            QMessageBox.information(self, "工艺路线确认错误", resp.text)
-
-        # navigate to prepare page
+        
+        data = resp.json()
+        
+        self.controller.context["prep_instructions"] = data['prepInstructions'] 
+        # Navigate to prepare page
         self.controller.show_page("prepare_page", self.controller.btnPrepare)

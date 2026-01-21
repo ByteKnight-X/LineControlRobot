@@ -34,61 +34,32 @@ class PreparePage(QtWidgets.QWidget):
 
     def show_equipment_preparation(self):
         """Render equipment preparation from controller.context['prep_instructions'] (fallback to local XML)."""
-        try:
-            prep = self._get_prep_from_context()
-            if prep:
-                lines = []
-                items = prep.get("equipmentPrepInstructions") or prep.get("equipment_prep_instructions") or []
-                for idx, it in enumerate(items, start=1):
-                    lines.append(f"【步骤 {idx}】 设备准备")
-                    lines.append(f"    工位: {it.get('workstation') or it.get('workstation')}")
-                    lines.append(f"    物料/设备: {it.get('material')}")
-                    if it.get("colorCode") or it.get("color_code"):
-                        lines.append(f"    色号: {it.get('colorCode') or it.get('color_code')}")
-                    if it.get("weight"):
-                        lines.append(f"    重量: {it.get('weight')}")
-                    if it.get("quantity"):
-                        lines.append(f"    数量: {it.get('quantity')}")
-                    if it.get("unit"):
-                        lines.append(f"    单位: {it.get('unit')}")
-                    if it.get("remark"):
-                        lines.append(f"    备注: {it.get('remark')}")
-                    lines.append("")
-                self.prepInfoText.setPlainText("\n".join(lines))
-                return
-
-        except Exception:
-            pass
-
-        # fallback to original XML loader
-        xml_path = Path(__file__).resolve().parent / "resource" / "human_instructions" / "设备准备指令.xml"
-        try:
-            tree = ET.parse(str(xml_path))
-            root = tree.getroot()
-            ns = {'ns': 'urn:linecontrol:screen-prep'}
-            steps = root.find(".//ns:Steps", ns)
-            if steps is None:
-                self.prepInfoText.setPlainText("未找到设备准备指令内容。")
-                return
-            lines = []
-            for step in steps.findall("ns:Step", ns):
-                sid = step.get("id", "")
-                instr = step.findtext("ns:Instruction", "", ns)
-                params = step.find("ns:Parameters", ns)
-                lines.append(f"【步骤 {sid}】{instr}")
-                if params is not None:
-                    for p in params:
-                        tag = p.tag.split('}', 1)[-1]
-                        val = p.text
-                        if tag in ("工作站", "物料", "色号", "重量", "数量", "单位"):
-                            lines.append(f"    {tag}: {val}  ←")
-                        else:
-                            lines.append(f"    {tag}: {val}")
-                lines.append("")  # Blank line separator
-            text = "\n".join(lines)
-            self.prepInfoText.setPlainText(text)
-        except Exception as e:
-            self.prepInfoText.setPlainText(f"设备准备指令加载失败：{e}")
+        prep = self.controller.context["prep_instructions"]
+        if not prep:
+            raise ValueError("No equipment preparation instructions.")
+        lines = []
+        steps = prep.get("equipmentPrepInstructions")
+        print(f"equipmentPrepInstructions: {steps}")
+        for idx, step in enumerate(steps, start=1):
+            lines.append(f"【步骤 {idx}】 设备准备")
+            lines.append(f"    工位: {step.get('workstation') or step.get('workstation')}")
+            lines.append(f"    物料/设备: {step.get('material')}")
+            if step.get("colorCode") or step.get("color_code"):
+                lines.append(f"    色号: {step.get('colorCode') or step.get('color_code')}")
+            if step.get("weight"):
+                lines.append(f"    重量: {step.get('weight')}")
+            if step.get("quantity"):
+                lines.append(f"    数量: {step.get('quantity')}")
+            if step.get("unit"):
+                lines.append(f"    单位: {step.get('unit')}")
+            if step.get("remark"):
+                lines.append(f"    备注: {step.get('remark')}")
+            lines.append("")
+        self.prepInfoText.setPlainText("\n".join(lines))
+        return
+        
+        
+        
 
     def show_fabric_preparation(self):
         """Render material preparation from context (fallback to local XML)."""
@@ -149,18 +120,19 @@ class PreparePage(QtWidgets.QWidget):
     def show_ink_preparation(self):
         """Render ink/paste preparation from context (fallback to local XML)."""
         prep = self.controller.context["prep_instructions"]
-        if prep:
-            lines = []
-            items = prep.get("inkPastePrepInstructions")
-            for idx, it in enumerate(items, start=1):
-                color_code = it.get('colorCode')
-                weight = it.get('weight')
-                material_type = it.get('materialType')
-                remark = it.get('remark')
-                lines.append(
-                    f"【步骤 {idx}】 {material_type}准备:\n-色号: {color_code}\n-重量: {weight}\n-备注: {remark}\n"
-                ) 
-            self.prepInfoText.setPlainText("\n".join(lines))
+        if not prep:
+            raise ValueError("No preparation instructions.")
+        lines = []
+        items = prep.get("inkPastePrepInstructions")
+        for idx, it in enumerate(items, start=1):
+            color_code = it.get('colorCode')
+            weight = it.get('weight')
+            material_type = it.get('materialType')
+            remark = it.get('remark')
+            lines.append(
+                f"【步骤 {idx}】 {material_type}准备:\n-色号: {color_code}\n-重量: {weight}\n-备注: {remark}\n"
+            ) 
+        self.prepInfoText.setPlainText("\n".join(lines))    
         return
 
         
