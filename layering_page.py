@@ -360,17 +360,19 @@ class LayeringPage(QtWidgets.QWidget):
         entry = self.separation_plan[self.current_index]
         if not isinstance(entry, dict):
             return
-        entry = {
+        
+        # 更新字段而非替换整个字典，保留 imagePath、index 等关键字段
+        entry.update({
             "material": self.materialLineEdit.text().strip(),
             "model": self.modelLineEdit.text().strip(),
             "lineDiameter": self.wireDiameterLineEdit.text().strip(),
             "drawingMethod": self.pullingMethodCombo.currentText().strip(),
-            "drawAngle": int(self.pullingAngleLineEdit.text()),
+            "drawAngle": int(self.pullingAngleLineEdit.text()) if self.pullingAngleLineEdit.text().strip() else 0,
             "tension": self.tensionLineEdit.text().strip(),
             "netFrameSpecification": self.frameModelLineEdit.text().strip(),
-            "count": int(self.meshCountLineEdit.text()),
-        }
-        self.separation_plan[self.current_index] = entry
+            "count": int(self.meshCountLineEdit.text()) if self.meshCountLineEdit.text().strip() else 0,
+        })
+        
         self.controller.context["separationPlan"] = self.separation_plan
         self._set_params_editable(False)
         self.refresh_display()

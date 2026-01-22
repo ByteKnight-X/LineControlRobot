@@ -37,13 +37,14 @@ class LayeringRequestWorker(QObject):
         except Exception as exc:
             self.failed.emit(str(exc))
 
-class WorkOrder:
+
+class TaskOrder:
     """
     Data structure to hold information about the imported task file.
     """
     def __init__(self, file_path: str):
         """
-        Initialize and parse the XML work order file.
+        Initialize and parse the XML task order file.
         """
         self.file_path = file_path
         try:
@@ -79,7 +80,7 @@ class WorkOrder:
         Return a single-string preview of the parsed content.
         """
         return self.__content_str
-    
+
 
 class ImportPage(QtWidgets.QWidget):
     """
@@ -128,6 +129,8 @@ class ImportPage(QtWidgets.QWidget):
             self.btnEditTask.setText("保存任务单")
         else:
             self.btnEditTask.setText("编辑任务单")
+            # Save edited values to context when exiting edit mode
+            self._save_task_order_to_context()
 
 
     def open_task_file(self) -> None:
@@ -141,27 +144,27 @@ class ImportPage(QtWidgets.QWidget):
             return
 
         # Load and preview the selected task file
-        work_order = WorkOrder(task_file_path)
+        task_order = TaskOrder(task_file_path)
         self._work_order_dir = os.path.dirname(task_file_path)
         
         # Populate form inside QScrollArea for structured display
         try:
-            self._populate_instructions_form(work_order.get_content_dict())
+            self._populate_instructions_form(task_order.get_content_dict())
         except Exception:
             # Fallback to simple text if something unexpected happens
             form_layout = self.instructionsWidget.layout()
             self._clear_form_layout(form_layout)
-            val_lbl = QtWidgets.QLabel(work_order.get_content_str())
+            val_lbl = QtWidgets.QLabel(task_order.get_content_str())
             val_lbl.setWordWrap(True)
             form_layout.addRow(QtWidgets.QLabel("Preview:"), val_lbl)
         
         # Load design pattern
-        pattern_design_path = work_order.get_content_dict().get("图案设计", "")
+        pattern_design_path = task_order.get_content_dict().get("图案设计", "")
         if not self._load_svg_into_pattern_design(pattern_design_path, self._work_order_dir):
             return
         
         self.btnNextStep.setEnabled(True)
-        self.controller.context['work_order'] = work_order.get_content_dict()
+        self.controller.context['task_order'] = task_order.get_content_dict()
     
 
     def start_layering(self) -> None:
@@ -249,6 +252,15 @@ class ImportPage(QtWidgets.QWidget):
             if key:
                 edited[key] = val if val is not None else ""
         return edited
+    
+    def _save_task_order_to_context(self) -> None:
+        """
+        Collect edited form values and save to context.
+        """
+        edited = self._collect_form_values()
+        if edited:
+            self.controller.context['task_order'] = edited
+            logger.info("Task order saved to context: %s", edited)
 
     def _populate_instructions_form(self, content: dict) -> None:
         """

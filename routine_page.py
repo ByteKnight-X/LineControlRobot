@@ -387,21 +387,18 @@ class RoutinePage(QtWidgets.QWidget):
         # Call backend API to confirm routine
         url = f"http://127.0.0.1:8000/tasks/{task_id}/generate_prep"
         
-        raw_size_ranges = self.controller.context.get("work_order").get("码段")
-        raw_quantities = self.controller.context.get("work_order").get("数量")
+        raw_size_ranges = self.controller.context.get("task_order").get("码段")
+        raw_quantities = self.controller.context.get("task_order").get("数量")
         
         payload = {
             "approved": True,
+            "sku": self.controller.context.get("task_order").get("货号"),
+            "sizeRanges": self._split_list(raw_size_ranges),
+            "quantities": self._normalize_quantities(raw_quantities),
             "route": self.controller.context.get("route"),
             "separationPlan": self.controller.context.get("separation_plan"),
             "sop": self.controller.context.get("sop"),
-            "sku": self.controller.context.get("work_order").get("货号"),
-            "sizeRanges": self._split_list(raw_size_ranges),
-            "quantities": self._normalize_quantities(raw_quantities),
         }
-             
-        
-        print(f"aaff {payload}")
            
         try:
             resp = requests.post(url, json=payload, timeout=10)
@@ -410,12 +407,13 @@ class RoutinePage(QtWidgets.QWidget):
             return
 
         if not resp.ok:
+            print(f"Response error: {resp.status_code}, {resp.text}")
             QMessageBox.critical(self, "确认失败", f"状态码: {resp.status_code}\n{resp.text}")
             return
 
-        
+        # Update context with prep instructions
         data = resp.json()
-        
-        self.controller.context["prep_instructions"] = data['prepInstructions'] 
+        self.controller.context["prep_instructions"] = data['prepInstructions']
+         
         # Navigate to prepare page
         self.controller.show_page("prepare_page", self.controller.btnPrepare)
