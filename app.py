@@ -1,60 +1,79 @@
 import sys
-from typing import Dict
-from PyQt5 import QtWidgets, uic
 from pathlib import Path
-from utilities.constants import STYLE
+
+from PyQt5 import QtWidgets, uic
+
 from import_page import ImportPage
 from layering_page import LayeringPage
-from routine_page import RoutinePage
-from prepare_page import PreparePage
 from monitor_page import MonitorPage
+from prepare_page import PreparePage
+from routine_page import RoutinePage
+from utilities.backend_client import BackendClient
+
+
+class PlaceholderPage(QtWidgets.QWidget):
+    """Fallback page for areas that do not have a completed implementation yet."""
+
+    def __init__(self, title: str, message: str) -> None:
+        super().__init__()
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        title_label = QtWidgets.QLabel(title)
+        title_label.setStyleSheet("font-size: 18px; font-weight: 700; color: #262626;")
+        body_label = QtWidgets.QLabel(message)
+        body_label.setWordWrap(True)
+        body_label.setStyleSheet("font-size: 13px; color: #595959;")
+        layout.addWidget(title_label)
+        layout.addWidget(body_label)
+        layout.addStretch(1)
+
 
 class MainWindow(QtWidgets.QMainWindow):
-    """Main application window that manages different screens."""
-
     def __init__(self) -> None:
         super().__init__()
-        uic.loadUi(str(Path(__file__).parent / "forms" / "main_window.ui"), self) # Load main template
-        self.setWindowTitle("Versatile Robotics")
-        self.context = {}
+        uic.loadUi(str(Path(__file__).resolve().parent / "forms" / "main_window.ui"), self)
+        self.context = {}  # Shared workflow data across pages.
         self.pages = {}
-        self.setStyleSheet(STYLE)
-        
-        # Connect navigation buttons
-        self.btnImport.clicked.connect(lambda: self.show_page('import_page', self.btnImport))
-        self.btnLayering.clicked.connect(lambda: self.show_page('layering_page', self.btnLayering))
-        self.btnRoutine.clicked.connect(lambda: self.show_page('routine_page', self.btnRoutine))
-        self.btnMonitoring.clicked.connect(lambda: self.show_page('monitoring_page', self.btnMonitoring))
-        # self.btnEvaluation.clicked.connect(lambda: self.show_page('evaluation_page', self.btnEvaluation))
+        self.backend = BackendClient()
 
-        self.show_page('import_page', self.btnImport)
-        
-                
-    def show_page(self, page_name, btn):
-        # Load dynamic pages
+        self._nav_buttons = {
+            "import_page": self.btnImport,
+            "stencil_page": self.btnStencil,
+            "route_page": self.btnRoute,
+            "prepare_page": self.btnPrepare,
+            "monitor_page": self.btnMonitor,
+            "kpi_page": self.btnKpi,
+        }
+        self._page_factories = {
+            "import_page": lambda: ImportPage(controller=self),
+            "stencil_page": lambda: LayeringPage(controller=self),
+            "route_page": lambda: RoutinePage(controller=self),
+            "prepare_page": lambda: PreparePage(controller=self),
+            "monitor_page": lambda: MonitorPage(controller=self),
+            "kpi_page": lambda: PlaceholderPage("绩效评估", "绩效评估页面暂未接入新的设计稿。"),
+        }
+
+        for page_name, button in self._nav_buttons.items():
+            button.clicked.connect(lambda _=False, name=page_name: self.show_page(name))
+
+        self.statusbar.showMessage(f"Backend: {self.backend.base_url}")
+        self.show_page("import_page")
+
+    def show_page(self, page_name: str) -> None:
         if page_name not in self.pages:
-            if page_name == 'import_page':
-                page = ImportPage(controller=self)
-            elif page_name == 'layering_page':
-                page = LayeringPage(controller=self)
-            elif page_name == 'prepare_page':
-                page = PreparePage(controller=self)
-            elif page_name == 'routine_page':
-                page = RoutinePage(controller=self)
-            elif page_name == 'monitoring_page':
-                page = MonitorPage(controller=self)
-            elif page_name == 'evaluation_page':
-                pass  # To be implemented
-            else:
+            factory = self._page_factories.get(page_name)
+            if factory is None:
                 return
-            self.stackedRight.addWidget(page)
+            page = factory()
+            self.stackedPages.addWidget(page)
             self.pages[page_name] = page
-        self.stackedRight.setCurrentWidget(self.pages[page_name])
+        page = self.pages[page_name]
+        if hasattr(page, "refresh_data"):
+            page.refresh_data()
+        self.stackedPages.setCurrentWidget(page)
 
-        # Update left-side button highlight
-        for b in (self.btnImport, self.btnLayering, self.btnRoutine, self.btnMonitoring, self.btnEvaluation):
-            b.setStyleSheet('font-weight: normal;')
-        btn.setStyleSheet('font-weight: bold;')
+        for name, button in self._nav_buttons.items():
+            button.setChecked(name == page_name)
 
 def main() -> None:
     app = QtWidgets.QApplication(sys.argv)

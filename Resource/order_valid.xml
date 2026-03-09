@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<production_order>
+  <header>
+    <order_id>PO-20260206-01</order_id>
+    <client_id>SANSTAR</client_id>
+    <date_ms>1770336000000</date_ms>
+    <delivery_date_ms>1770940800000</delivery_date_ms>
+    <progress>0.0</progress>
+    <status>created</status>
+  </header>
+
+  <lines>
+    <line>
+      <order_id>PO-20260206-01</order_id>
+      <order_line_id>1</order_line_id>
+      <sku>8Pro</sku>
+      <size>43-44</size>
+      <color>神行橘</color>
+      <quantity_planned>1200</quantity_planned>
+      <quantity_good>0</quantity_good>
+      <quantity_scrap>0</quantity_scrap>
+      <quantity_rework>0</quantity_rework>
+      <start_time_ms>0</start_time_ms>
+      <finished_time_ms>0</finished_time_ms>
+      <fabric_material>网布</fabric_material>
+      <fabric_thickness>1.20</fabric_thickness>
+      <basecoat_thickness>0.18</basecoat_thickness>
+      <ink_thickness>0.12</ink_thickness>
+      <pattern_design>wing_orange_v3.svg</pattern_design>
+      <flatness>0.35</flatness>
+      <dryness>0.92</dryness>
+      <humidity>0.15</humidity>
+      <folding_endurance>40000</folding_endurance>
+      <status>created</status>
+    </line>
+
+    <line>
+      <order_id>PO-20260206-01</order_id>
+      <order_line_id>2</order_line_id>
+      <sku>8Pro</sku>
+      <size>45-46</size>
+      <color>神行橘</color>
+      <quantity_planned>800</quantity_planned>
+      <quantity_good>0</quantity_good>
+      <quantity_scrap>0</quantity_scrap>
+      <quantity_rework>0</quantity_rework>
+      <start_time_ms>0</start_time_ms>
+      <finished_time_ms>0</finished_time_ms>
+      <fabric_material>网布</fabric_material>
+      <fabric_thickness>1.20</fabric_thickness>
+      <basecoat_thickness>0.18</basecoat_thickness>
+      <ink_thickness>0.12</ink_thickness>
+      <pattern_design>wing_orange_v3.svg</pattern_design>
+      <flatness>0.35</flatness>
+      <dryness>0.92</dryness>
+      <humidity>0.15</humidity>
+      <folding_endurance>40000</folding_endurance>
+      <status>created</status>
+    </line>
+  </lines>
+</production_order>

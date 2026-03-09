@@ -1,369 +1,666 @@
 from pathlib import Path
-import os
-import logging
-import requests
-from xml.etree import ElementTree as ET
-from PyQt5 import QtWidgets, uic, QtWebEngineWidgets
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
-from PyQt5.QtCore import Qt, QUrl, QObject, pyqtSignal, QThread
+from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
+from datetime import datetime, timezone
 
+from PyQt5 import QtCore, QtWidgets, uic
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem
 
-class LayeringRequestWorker(QObject):
-    """
-    Worker that posts a layering request without blocking the UI.
-    """
-    finished = pyqtSignal(dict)
-    failed = pyqtSignal(str)
-
-    def __init__(self, backend_url: str, payload: dict):
-        super().__init__()
-        self.backend_url = backend_url
-        self.payload = payload
-
-    def run(self) -> None:
-        try:
-            resp = requests.post(self.backend_url, json=self.payload, timeout=10)
-            if not resp.ok:
-                self.failed.emit(f"状态码: {resp.status_code}\n{resp.text}")
-                return
-            try:
-                data = resp.json()
-            except Exception:
-                self.failed.emit(resp.text)
-                return
-            self.finished.emit(data)
-        except Exception as exc:
-            self.failed.emit(str(exc))
+from utilities.backend_client import BackendError
 
 
-class TaskOrder:
-    """
-    Data structure to hold information about the imported task file.
-    """
-    def __init__(self, file_path: str):
-        """
-        Initialize and parse the XML task order file.
-        """
-        self.file_path = file_path
-        try:
-            self.tree = ET.parse(file_path)
-            self.root = self.tree.getroot()
-        except Exception as exc:
-            raise RuntimeError(f"无法读取或解析XML文件: {exc}") from exc
-        self.__parse_content()
+PRIMARY_BUTTON_STYLE = (
+    "background-color: #52c41a; "
+    "border: 1px solid #52c41a; "
+    "color: #ffffff; "
+    "font-weight: 600; "
+    "padding: 6px 12px; "
+    "border-radius: 6px;"
+)
 
-    def __parse_content(self) -> None:
-        """
-        Parse XML leaf nodes into a dictionary and a preview string.
-        """
-        self.__content_dict = {}
+SECONDARY_BUTTON_STYLE = (
+    "background-color: #ffffff; "
+    "border: 1px solid #d9d9d9; "
+    "color: #333333; "
+    "padding: 6px 12px; "
+    "border-radius: 6px;"
+)
+
+
+def _safe_text(value: Any) -> str:
+    return "" if value is None else str(value)
+
+
+def _ms_to_datetime(ms: int | None, fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
+    if not ms:
+        return ""
+    dt = datetime.fromtimestamp(ms / 1000, tz=timezone.utc).astimezone()
+    return dt.strftime(fmt)
+
+
+def _order_line_id(line: Dict[str, Any]) -> Any:
+    return line.get("order_line_id", line.get("id"))
+
+
+def _orders(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    value = payload.get("orders")
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _lots(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    value = payload.get("lots")
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _detail(payload: Dict[str, Any]) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    header = payload.get("header")
+    lines = payload.get("lines")
+    if not isinstance(header, dict):
+        header = {}
+    if not isinstance(lines, list):
         lines = []
-        for elem in self.root.iter():
-            if list(elem):
-                continue
-            tag = elem.tag.split('}')[-1] # Remove namespace if present
-            text = (elem.text or "").strip()
-            self.__content_dict[tag] = text
-            lines.append(f"{tag}: {text}\n")
-        self.__content_str = "".join(lines)
-    
-    def get_content_dict(self) -> dict:
-        """
-        Return the parsed XML content as a dict.
-        """
-        return self.__content_dict
+    return header, [item for item in lines if isinstance(item, dict)]
 
-    def get_content_str(self) -> str:
-        """
-        Return a single-string preview of the parsed content.
-        """
-        return self.__content_str
+
+def _setup_table(
+    table: QTableWidget,
+    headers: List[str],
+    selection_mode: QtWidgets.QAbstractItemView.SelectionMode = QtWidgets.QAbstractItemView.SingleSelection,
+) -> None:
+    table.setColumnCount(len(headers))
+    table.setHorizontalHeaderLabels(headers)
+    table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+    table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+    table.setSelectionMode(selection_mode)
+    table.setAlternatingRowColors(True)
+    table.verticalHeader().setVisible(False)
+    table.horizontalHeader().setStretchLastSection(True)
+
+
+def _fill_table(table: QTableWidget, rows: List[List[Any]]) -> None:
+    table.setRowCount(len(rows))
+    for row_index, row_values in enumerate(rows):
+        for col_index, value in enumerate(row_values):
+            item = QTableWidgetItem(_safe_text(value))
+            item.setTextAlignment(QtCore.Qt.AlignCenter)
+            table.setItem(row_index, col_index, item)
+
+
+def _filter_table(table: QTableWidget, keyword: str) -> None:
+    keyword = keyword.strip().lower()
+    for row in range(table.rowCount()):
+        values = []
+        for col in range(table.columnCount()):
+            item = table.item(row, col)
+            values.append(item.text() if item else "")
+        row_text = " ".join(values).lower()
+        table.setRowHidden(row, bool(keyword and keyword not in row_text))
+
+
+class OrderLineAssignDialog(QtWidgets.QDialog):
+    LINE_HEADERS = ["订单行ID", "SKU", "尺码", "颜色", "计划数量", "状态"]
+    LOT_HEADERS = ["关联订单ID", "批次ID", "开始时间", "产线编号", "进度", "状态"]
+
+    def __init__(
+        self,
+        order_header: Dict[str, Any],
+        order_lines: List[Dict[str, Any]],
+        lots: List[Dict[str, Any]],
+        imports_api: Any,
+        parent: Optional[QtWidgets.QWidget] = None,
+    ) -> None:
+        super().__init__(parent)
+        self.imports_api = imports_api
+        self.order_id = _safe_text(order_header.get("order_id"))
+        self.order_lines = [line for line in order_lines if isinstance(line, dict)]
+        self.lots = [lot for lot in lots if isinstance(lot, dict)]
+        self.selected_lot_id = ""
+        self.result_data: Optional[Dict[str, Any]] = None
+
+        self.setWindowTitle(f"订单行导入批次 - {self.order_id}")
+        self.resize(1320, 680)
+
+        self._build_ui()
+        self._load_order_lines()
+        self._load_lots()
+        self._load_selected_lot_lines()
+
+    def _build_ui(self) -> None:
+        root = QtWidgets.QVBoxLayout(self)
+
+        header = QtWidgets.QFrame()
+        header_layout = QtWidgets.QHBoxLayout(header)
+        title = QtWidgets.QLabel(f"订单行导入批次 - {self.order_id}")
+        title.setStyleSheet("font-weight: 600; font-size: 14px; color: #262626;")
+        header_layout.addWidget(title)
+        header_layout.addStretch(1)
+
+        btn_close = QtWidgets.QPushButton("取消")
+        btn_close.setStyleSheet(SECONDARY_BUTTON_STYLE)
+        btn_close.clicked.connect(self.reject)
+        header_layout.addWidget(btn_close)
+        root.addWidget(header)
+
+        body = QtWidgets.QHBoxLayout()
+
+        left = QtWidgets.QVBoxLayout()
+        left.addWidget(QtWidgets.QLabel("待导入订单行"))
+        self.tblOrderLines = QtWidgets.QTableWidget()
+        _setup_table(
+            self.tblOrderLines,
+            self.LINE_HEADERS,
+            selection_mode=QtWidgets.QAbstractItemView.ExtendedSelection,
+        )
+        left.addWidget(self.tblOrderLines)
+        body.addLayout(left, 5)
+
+        middle = QtWidgets.QVBoxLayout()
+        middle.addStretch(1)
+        self.btnAssign = QtWidgets.QPushButton(">>")
+        self.btnAssign.setMinimumWidth(72)
+        self.btnAssign.setStyleSheet(PRIMARY_BUTTON_STYLE)
+        self.btnAssign.clicked.connect(self.assign_selected_lines)
+        middle.addWidget(self.btnAssign)
+        middle.addStretch(1)
+        body.addLayout(middle, 1)
+
+        right = QtWidgets.QVBoxLayout()
+        right.addWidget(QtWidgets.QLabel("已有批次"))
+        self.tblLots = QtWidgets.QTableWidget()
+        _setup_table(self.tblLots, self.LOT_HEADERS)
+        self.tblLots.itemSelectionChanged.connect(self._on_lot_changed)
+        right.addWidget(self.tblLots, 3)
+
+        right.addWidget(QtWidgets.QLabel("所选批次已包含行"))
+        self.tblSelectedLotLines = QtWidgets.QTableWidget()
+        _setup_table(self.tblSelectedLotLines, self.LINE_HEADERS)
+        right.addWidget(self.tblSelectedLotLines, 2)
+        body.addLayout(right, 6)
+
+        root.addLayout(body)
+
+        self.lblStatus = QtWidgets.QLabel("未选择已有批次，导入时将自动新建。")
+        self.lblStatus.setWordWrap(True)
+        self.lblStatus.setStyleSheet("color: #595959;")
+        root.addWidget(self.lblStatus)
+
+    def _set_status(self, message: str, is_error: bool = False) -> None:
+        color = "#cf1322" if is_error else "#595959"
+        self.lblStatus.setStyleSheet(f"color: {color};")
+        self.lblStatus.setText(message)
+
+    def _line_row(self, line: Dict[str, Any]) -> List[Any]:
+        return [
+            _order_line_id(line),
+            line.get("sku", ""),
+            line.get("size", ""),
+            line.get("color", ""),
+            line.get("quantity_planned", ""),
+            line.get("status", ""),
+        ]
+
+    def _lot_row(self, lot: Dict[str, Any]) -> List[Any]:
+        return [
+            lot.get("order_id", ""),
+            lot.get("lot_id", ""),
+            _ms_to_datetime(lot.get("start_time_ms")),
+            lot.get("production_line_id", ""),
+            lot.get("progress", ""),
+            lot.get("status", ""),
+        ]
+
+    def _load_order_lines(self) -> None:
+        _fill_table(self.tblOrderLines, [self._line_row(line) for line in self.order_lines])
+
+    def _load_lots(self) -> None:
+        self.tblLots.blockSignals(True)
+        _fill_table(self.tblLots, [self._lot_row(lot) for lot in self.lots])
+        self.tblLots.blockSignals(False)
+
+    def _selected_lot(self) -> Optional[Dict[str, Any]]:
+        selection_model = self.tblLots.selectionModel()
+        if selection_model is None:
+            return None
+
+        selected_rows = selection_model.selectedRows()
+        if not selected_rows:
+            return None
+
+        row = selected_rows[0].row()
+        if row >= len(self.lots):
+            return None
+        return self.lots[row]
+
+    def _selected_line_ids(self) -> List[int]:
+        selection_model = self.tblOrderLines.selectionModel()
+        if selection_model is None:
+            return []
+
+        selected_rows = sorted(index.row() for index in selection_model.selectedRows())
+        result: List[int] = []
+        for row in selected_rows:
+            if row >= len(self.order_lines):
+                continue
+            try:
+                result.append(int(_order_line_id(self.order_lines[row])))
+            except (TypeError, ValueError):
+                continue
+        return result
+
+    def _on_lot_changed(self) -> None:
+        self._load_selected_lot_lines()
+
+    def _load_selected_lot_lines(self) -> None:
+        selected_lot = self._selected_lot()
+        if selected_lot is None:
+            self.selected_lot_id = ""
+            _fill_table(self.tblSelectedLotLines, [])
+            self._set_status("未选择已有批次，导入时将自动新建。")
+            return
+
+        lot_id = _safe_text(selected_lot.get("lot_id"))
+        self.selected_lot_id = lot_id
+        if not lot_id:
+            _fill_table(self.tblSelectedLotLines, [])
+            self._set_status("当前选中的批次缺少批次ID，无法读取批次行。", is_error=True)
+            return
+
+        try:
+            payload = self.imports_api.get_lot(lot_id)
+        except BackendError as exc:
+            _fill_table(self.tblSelectedLotLines, [])
+            self._set_status(f"读取批次 {lot_id} 失败：{exc}", is_error=True)
+            return
+
+        _, lines = _detail(payload)
+        _fill_table(self.tblSelectedLotLines, [self._line_row(line) for line in lines])
+
+        if lines:
+            self._set_status(f"当前批次 {lot_id} 已包含 {len(lines)} 条批次行。")
+        else:
+            self._set_status(f"当前批次 {lot_id} 暂无批次行。")
+
+    def assign_selected_lines(self) -> None:
+        line_ids = self._selected_line_ids()
+        if not line_ids:
+            QMessageBox.information(self, "", "请先在左侧选择至少一条订单行。")
+            return
+
+        selected_lot = self._selected_lot()
+        lot_id = ""
+        lot_order_id = ""
+        if selected_lot:
+            lot_id = _safe_text(selected_lot.get("lot_id"))
+            lot_order_id = _safe_text(selected_lot.get("order_id"))
+            if lot_order_id and lot_order_id != self.order_id:
+                answer = QMessageBox.question(
+                    self,
+                    "确认跨订单导入",
+                    (
+                        f"当前选中的批次 {lot_id} 关联订单为 {lot_order_id}，"
+                        f"与当前订单 {self.order_id} 不一致，仍要继续导入吗？"
+                    ),
+                )
+                if answer != QMessageBox.Yes:
+                    return
+
+        try:
+            response = self.imports_api.import_lines_to_lot(
+                self.order_id,
+                line_ids,
+                lot_id=lot_id or None,
+            )
+        except BackendError as exc:
+            self._set_status(f"导入失败：{exc}", is_error=True)
+            return
+
+        resolved_lot_id = _safe_text(response.get("lot_id") or response.get("id"))
+        self.result_data = {
+            "order_id": self.order_id,
+            "selected_line_ids": line_ids,
+            "lot_id": resolved_lot_id or lot_id,
+            "created_new": not bool(lot_id),
+        }
+        self.accept()
+
+
+class LotDetailDialog(QtWidgets.QDialog):
+    LINE_HEADERS = ["订单行ID", "SKU", "尺码", "颜色", "计划数量", "状态"]
+
+    def __init__(
+        self,
+        lot_summary: Dict[str, Any],
+        lot_header: Dict[str, Any],
+        lot_lines: List[Dict[str, Any]],
+        parent: Optional[QtWidgets.QWidget] = None,
+    ) -> None:
+        super().__init__(parent)
+        self.lot_summary = lot_summary
+        self.lot_header = lot_header
+        self.lot_lines = [line for line in lot_lines if isinstance(line, dict)]
+        self.next_request: Optional[Dict[str, Any]] = None
+
+        self.lot_id = _safe_text(lot_header.get("lot_id") or lot_summary.get("lot_id"))
+        self.order_id = _safe_text(lot_header.get("order_id") or lot_summary.get("order_id"))
+
+        self.setWindowTitle(f"批次详情 - {self.lot_id or '未命名批次'}")
+        self.resize(980, 620)
+
+        self._build_ui()
+        self._load_summary()
+        self._load_lines()
+
+    def _build_ui(self) -> None:
+        root = QtWidgets.QVBoxLayout(self)
+        group = QtWidgets.QGroupBox("批次摘要")
+        form = QtWidgets.QFormLayout(group)
+        self.lblLotId = QtWidgets.QLabel()
+        self.lblOrderId = QtWidgets.QLabel()
+        self.lblStartTime = QtWidgets.QLabel()
+        self.lblProductionLine = QtWidgets.QLabel()
+        self.lblProgress = QtWidgets.QLabel()
+        self.lblStatus = QtWidgets.QLabel()
+        form.addRow("批次ID", self.lblLotId)
+        form.addRow("关联订单ID", self.lblOrderId)
+        form.addRow("开始时间", self.lblStartTime)
+        form.addRow("产线编号", self.lblProductionLine)
+        form.addRow("进度", self.lblProgress)
+        form.addRow("状态", self.lblStatus)
+        root.addWidget(group)
+
+        self.tblLotLines = QtWidgets.QTableWidget()
+        _setup_table(self.tblLotLines, self.LINE_HEADERS)
+        root.addWidget(self.tblLotLines)
+
+        self.lblFeedback = QtWidgets.QLabel()
+        self.lblFeedback.setWordWrap(True)
+        self.lblFeedback.setStyleSheet("color: #595959;")
+        root.addWidget(self.lblFeedback)
+
+        button_row = QtWidgets.QHBoxLayout()
+        button_row.addStretch(1)
+
+        self.btnNext = QtWidgets.QPushButton("开始工艺设计")
+        self.btnNext.setStyleSheet(PRIMARY_BUTTON_STYLE)
+        self.btnNext.clicked.connect(self.start_separation)
+        button_row.addWidget(self.btnNext)
+
+        root.addLayout(button_row)
+
+    def _load_summary(self) -> None:
+        header = self.lot_header if isinstance(self.lot_header, dict) else {}
+        summary = self.lot_summary if isinstance(self.lot_summary, dict) else {}
+
+        self.lblLotId.setText(_safe_text(header.get("lot_id") or summary.get("lot_id")))
+        self.lblOrderId.setText(_safe_text(header.get("order_id") or summary.get("order_id")))
+        self.lblStartTime.setText(
+            _ms_to_datetime(header.get("start_time_ms") or summary.get("start_time_ms"))
+        )
+        self.lblProductionLine.setText(
+            _safe_text(header.get("production_line_id") or summary.get("production_line_id"))
+        )
+        self.lblProgress.setText(_safe_text(header.get("progress") or summary.get("progress")))
+        self.lblStatus.setText(_safe_text(header.get("status") or summary.get("status")))
+
+    def _load_lines(self) -> None:
+        rows = []
+        for line in self.lot_lines:
+            rows.append(
+                [
+                    _order_line_id(line),
+                    line.get("sku", ""),
+                    line.get("size", ""),
+                    line.get("color", ""),
+                    line.get("quantity_planned", ""),
+                    line.get("status", ""),
+                ]
+            )
+
+        _fill_table(self.tblLotLines, rows)
+
+        if self.lot_lines:
+            self.lblFeedback.setText(f"当前批次包含 {len(self.lot_lines)} 条批次行。")
+        else:
+            self.lblFeedback.setText("当前批次详情未返回批次行。")
+
+    def start_separation(self) -> None:
+        if not self.order_id:
+            self.lblFeedback.setText("当前批次缺少关联订单ID。")
+            return
+        
+        
+
+        self.next_request = {
+            "lot_id": self.lot_id,
+            "order_id": self.order_id,
+        }
+        self.accept()
 
 
 class ImportPage(QtWidgets.QWidget):
-    """
-    Interface for importing production task files and design documents.
-    """
+    ORDER_HEADERS = ["订单ID", "客户ID", "下单日期", "交付日期", "进度", "状态"]
+    LOT_HEADERS = ["关联订单ID", "批次ID", "开始时间", "产线编号", "进度", "状态"]
+
     def __init__(self, controller):
-        """
-        Load UI and initialize the import page with the given controller.
-        """
         super().__init__()
         uic.loadUi(str(Path(__file__).resolve().parent / "forms" / "import_page.ui"), self)
+
         self.controller = controller
-        self.setup_ui()
+        self.imports_api = controller.backend.imports
+        self.order_rows: List[Dict[str, Any]] = []
+        self.lot_rows: List[Dict[str, Any]] = []
+        self.last_feedback_text = "请先通过“本地导入”读取生产订单。"
 
-    def setup_ui(self) -> None:
-        """
-        Connect UI signals and set initial widget states.
-        """
-        self.btnSelectTask.clicked.connect(self.open_task_file)
-        self.btnNextStep.clicked.connect(self.start_layering)
-        self.btnNextStep.setEnabled(False)
+        self._setup_ui()
+        self.refresh_data()
 
-        # Set up edit mode toggle
-        self._is_editing = False
-        self.btnEditTask.setText("编辑任务单")
-        self.btnEditTask.clicked.connect(self.toggle_edit_mode)
-        
-        # Disable context menu on pattern design preview
-        self.patternDesign.setContextMenuPolicy(Qt.NoContextMenu)
+    def _setup_ui(self) -> None:
+        _setup_table(self.tblProductionOrders, self.ORDER_HEADERS)
+        _setup_table(self.tblBatchOrders, self.LOT_HEADERS)
 
-    def toggle_edit_mode(self) -> None:
-        """
-        Toggle the edit state of instruction fields and update the edit button label.
-        """
-        self._is_editing = not self._is_editing
-        # Toggle read-only state of all QLineEdit widgets
-        form_layout = self.instructionsWidget.layout()
-        for i in range(form_layout.rowCount()):
-            field = form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole)
-            if field is not None:
-                widget = field.widget()
-                if isinstance(widget, QtWidgets.QLineEdit):
-                    widget.setReadOnly(not self._is_editing)
-        # Toggle button text
-        if self._is_editing:
-            self.btnEditTask.setText("保存任务单")
-        else:
-            self.btnEditTask.setText("编辑任务单")
-            # Save edited values to context when exiting edit mode
-            self._save_task_order_to_context()
+        self.tblProductionOrders.cellDoubleClicked.connect(self.on_order_double_clicked)
+        self.tblBatchOrders.cellDoubleClicked.connect(self.on_lot_double_clicked)
 
+        self.btnImportOrder.clicked.connect(self.import_order)
+        self.btnSyncErp.clicked.connect(self.sync_with_erp)
+        self.btnAIOptimize.clicked.connect(self.ai_optimize_lots)
+        self.btnValidate.clicked.connect(self.ai_validate_lots)
 
-    def open_task_file(self) -> None:
-        """
-        Prompt the user to select a task XML, parse it, and update the UI preview.
-        """
-        # Open file dialog to select task file
-        task_file_path, _ = QFileDialog.getOpenFileName(self, "选择生产任务单", "", "XML Files (*.xml)")
-        if not task_file_path:
-            print("No task file selected.")
-            return
+        self.txtSearch.textChanged.connect(self.refresh_order_list)
+        self.txtSearch.textChanged.connect(self.refresh_lot_list)
 
-        # Load and preview the selected task file
-        task_order = TaskOrder(task_file_path)
-        self._work_order_dir = os.path.dirname(task_file_path)
-        
-        # Populate form inside QScrollArea for structured display
+        self.cmbPriority.setEnabled(False)
+        self.cmbPriority.setToolTip("当前后端未提供优先级字段。")
+
+        self.txtValidationFeedback.setReadOnly(True)
+        self.txtValidationFeedback.setPlainText(self.last_feedback_text)
+
+    def set_feedback(self, message: str) -> None:
+        self.last_feedback_text = message
+        self.txtValidationFeedback.setPlainText(message)
+
+    def refresh_data(self) -> None:
+        self.load_orders()
+        self.load_lots()
+
+    def load_orders(self) -> None:
         try:
-            self._populate_instructions_form(task_order.get_content_dict())
-        except Exception:
-            # Fallback to simple text if something unexpected happens
-            form_layout = self.instructionsWidget.layout()
-            self._clear_form_layout(form_layout)
-            val_lbl = QtWidgets.QLabel(task_order.get_content_str())
-            val_lbl.setWordWrap(True)
-            form_layout.addRow(QtWidgets.QLabel("Preview:"), val_lbl)
-        
-        # Load design pattern
-        pattern_design_path = task_order.get_content_dict().get("图案设计", "")
-        if not self._load_svg_into_pattern_design(pattern_design_path, self._work_order_dir):
-            return
-        
-        self.btnNextStep.setEnabled(True)
-        self.controller.context['task_order'] = task_order.get_content_dict()
-    
-
-    def start_layering(self) -> None:
-        """
-        Collect form data, request a layering plan from the backend, and navigate on success.
-        """
-        edited = self._collect_form_values()
-        
-        if not edited:
-            QMessageBox.warning(self, "缺少任务信息", "请先导入并保存任务单。")
+            payload = self.imports_api.list_orders()
+            self.order_rows = _orders(payload)
+        except BackendError as exc:
+            self.order_rows = []
+            self.tblProductionOrders.setRowCount(0)
+            if "请先通过" not in self.last_feedback_text:
+                self.set_feedback(f"{self.last_feedback_text}\n\n订单列表刷新失败：{exc}")
             return
 
-        payload = {
-            "Header": {
-                "fileId": edited.get("文件编号"),
-                "deliveryDate": edited.get("交付日期"),
-            },
-            "Item": {
-                "sku": edited.get("货号"),
-                "partName": edited.get("部件"),
-                "colorway": edited.get("配色"),
-                "sizeRanges": self._split_list(edited.get("码段")),
-                "quantities": self._normalize_quantities(edited.get("数量")),
-                "fabricMaterial": edited.get("面料材质"),
-                "fabricThickness": float(edited.get("面料厚度", 0)),
-                "baseLayerThickness": float(edited.get("打底层厚", 0)),
-                "inkLayerThickness": float(edited.get("油墨层厚", 0)),
-                "designGraphic": edited.get("图案设计"),
-            },
-            "Quality": {
-                "colorFastness": {
-                    "dryRubbing": edited.get("干摩擦"),
-                    "wetRubbing": edited.get("湿摩擦"),
-                    "waterFastness": edited.get("水牢度"),
-                },
-                "foldResistanceCount": int(edited.get("耐折次数", 0)),
-            },
-        }
+        rows = []
+        for order in self.order_rows:
+            rows.append(
+                [
+                    order.get("order_id", ""),
+                    order.get("client_id", ""),
+                    _ms_to_datetime(order.get("date_ms")),
+                    _ms_to_datetime(order.get("delivery_date_ms")),
+                    order.get("progress", ""),
+                    order.get("status", ""),
+                ]
+            )
+        _fill_table(self.tblProductionOrders, rows)
+        self.refresh_order_list()
 
-        self._request_layering(payload)
-
-
-    def _request_layering(self, payload: dict) -> None:
-        """
-        Dispatch a layering request in a background thread.
-        """
-        backend_url = "http://127.0.0.1:8000/tasks/import"
-        self.btnNextStep.setEnabled(False)
-        self._layering_thread = QThread(self)
-        self._layering_worker = LayeringRequestWorker(backend_url, payload)
-        self._layering_worker.moveToThread(self._layering_thread)
-        self._layering_thread.started.connect(self._layering_worker.run)
-        self._layering_worker.finished.connect(self._on_layering_success)
-        self._layering_worker.failed.connect(self._on_layering_failed)
-        self._layering_worker.finished.connect(self._layering_thread.quit)
-        self._layering_worker.failed.connect(self._layering_thread.quit)
-        self._layering_thread.finished.connect(self._layering_worker.deleteLater)
-        self._layering_thread.finished.connect(self._layering_thread.deleteLater)
-        self._layering_thread.start()
-
-    def _on_layering_success(self, message: dict) -> None:
-        """Switch to the layering page on successful response."""
-        self.controller.context["task_id"] = message.get("taskId")
-        self.controller.context["separation_plan"] = message.get("separationPlan")
-        self.controller.context["sop"] = message.get("sop")                          
-        self.controller.show_page('layering_page', self.controller.btnLayering)
-        self.btnNextStep.setEnabled(True)
-
-    def _on_layering_failed(self, message: str) -> None:
-        """Display an error message on layering failure."""
-        QMessageBox.critical(self, "获取分层计划失败", message or "未知错误")
-        self.btnNextStep.setEnabled(True)
-
-    def _collect_form_values(self) -> dict:
-        """
-        Collect values from the instructions form into a dict.
-        """
-        form_layout = self.instructionsWidget.layout()
-        edited = {}
-        for i in range(form_layout.rowCount()):
-            lbl_item = form_layout.itemAt(i, QtWidgets.QFormLayout.LabelRole)
-            val_item = form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole)
-            key = lbl_item.widget().text().strip() if lbl_item and lbl_item.widget() else None
-            val = val_item.widget().text().strip() if val_item and val_item.widget() else None
-            if key:
-                edited[key] = val if val is not None else ""
-        return edited
-    
-    def _save_task_order_to_context(self) -> None:
-        """
-        Collect edited form values and save to context.
-        """
-        edited = self._collect_form_values()
-        if edited:
-            self.controller.context['task_order'] = edited
-            logger.info("Task order saved to context: %s", edited)
-
-    def _populate_instructions_form(self, content: dict) -> None:
-        """
-        Populate the instructions form with key/value rows using QLineEdit widgets.
-        """
-        # clear existing
-        form_layout = self.instructionsWidget.layout()
-        self._clear_form_layout(form_layout)
-
-        # layout spacing for cleaner look
-        form_layout.setHorizontalSpacing(4)
-        form_layout.setVerticalSpacing(8)
-        self.instructionsWidget.setContentsMargins(2, 6, 6, 6)
-
-
-        # Populate entries
-        for key, value in content.items():
-            # name label: centered, no border
-            name_lbl = QtWidgets.QLabel(f"{key}")
-            name_lbl.setMinimumWidth(80)
-            name_lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  
-            name_lbl.setStyleSheet("border: none; font-size: 12px; font-weight: 600; padding: 0 2px;")
-            
-            logger.debug("%s = %s", name_lbl.text(), value)
-
-            # value editor: single-line editable control, initially read-only, max 80 chars
-            val_edit = QtWidgets.QLineEdit(value if value is not None else "")
-            val_edit.setMaxLength(80)                
-            val_edit.setReadOnly(True)               
-            val_edit.setFrame(False)                 
-            val_edit.setStyleSheet("background: transparent; font-size: 12px; padding: 0 2px;")
-            # val_edit.setToolTip(value if value is not None else "")
-            val_edit.setMinimumWidth(80)
-
-            form_layout.addRow(name_lbl, val_edit)
-
-    def _clear_form_layout(self, form_layout) -> None:
-        """
-        Remove all widgets and child layouts from the given layout.
-        """
-        # QFormLayout supports rowCount/removeRow
-        if hasattr(form_layout, "rowCount"):
-            for row in range(form_layout.rowCount() - 1, -1, -1):
-                for role in (QtWidgets.QFormLayout.LabelRole, QtWidgets.QFormLayout.FieldRole):
-                    item = form_layout.itemAt(row, role)
-                    if item is None:
-                        continue
-                    widget = item.widget()
-                    if widget is not None:
-                        widget.setParent(None)
-                        widget.deleteLater()
-                form_layout.removeRow(row)
+    def load_lots(self) -> None:
+        try:
+            payload = self.imports_api.list_lots()
+            self.lot_rows = _lots(payload)
+        except BackendError as exc:
+            self.lot_rows = []
+            self.tblBatchOrders.setRowCount(0)
+            if "请先通过" not in self.last_feedback_text:
+                self.set_feedback(f"{self.last_feedback_text}\n\n批次列表刷新失败：{exc}")
             return
 
-        # General QLayout clearing logic
-        while form_layout.count():
-            item = form_layout.takeAt(0)
-            if item is None:
-                continue
-            widget = item.widget()
-            if widget is not None:
-                widget.setParent(None)
-                widget.deleteLater()
-            child_layout = item.layout()
-            if child_layout is not None:
-                self._clear_form_layout(child_layout)
+        rows = []
+        for lot in self.lot_rows:
+            rows.append(
+                [
+                    lot.get("order_id", ""),
+                    lot.get("lot_id", ""),
+                    _ms_to_datetime(lot.get("start_time_ms")),
+                    lot.get("production_line_id", ""),
+                    lot.get("progress", ""),
+                    lot.get("status", ""),
+                ]
+            )
+        _fill_table(self.tblBatchOrders, rows)
+        self.refresh_lot_list()
 
-    def _load_svg_into_pattern_design(self, svg_path: str, base_dir: str = "") -> bool:
-        """
-        Validate and load an SVG file into the pattern preview widget.
-        """
-        if not svg_path.lower().endswith(".svg"):
-            QMessageBox.warning(self, "格式错误", "仅支持SVG文件。")
-            return False
-        if svg_path and not os.path.isabs(svg_path) and base_dir:
-            svg_path = os.path.join(base_dir, svg_path)
-        if not os.path.exists(svg_path):
-            QMessageBox.warning(self, "缺失文件", f"SVG不存在:\n{svg_path}")
-            return False
-        # Use QWebEngineView to load local file (better filter/mask support)
-        self.patternDesign.load(QUrl.fromLocalFile(os.path.abspath(svg_path)))
-        return True
-    
-    def _normalize_quantities(self, raw):
-        """
-        Normalize quantity values into a list with ints when possible.
-        """
-        items = self._split_list(raw)
-        return [int(x) if str(x).isdigit() else x for x in items]
+    def sync_with_erp(self) -> None:
+        self.set_feedback("ERP 暂未接入，当前仅支持本地导入。")
 
-    def _split_list(self, s):
-        """
-        Split a string or list into a cleaned list using '|' or ',' as separators.
-        """
-        if not s:
-            return []
-        if isinstance(s, str):
-            for ch in ("，", "、", "；", ";"):
-                s = s.replace(ch, ",")
-            sep = "|" if "|" in s else ","
-            return [p.strip() for p in s.split(sep) if p.strip()]
-        if isinstance(s, list):
-            return s
-        return [s]
+    def import_order(self) -> None:
+        file_path_text, _ = QFileDialog.getOpenFileName(self, "选择生产订单", "", "XML Files (*.xml)")
+        if not file_path_text:
+            return
 
+        xml_bytes = Path(file_path_text).read_bytes()
 
+        try:
+            response = self.imports_api.import_local_order(xml_bytes)
+        except BackendError as exc:
+            self.set_feedback(f"导入订单出现异常：{exc}")
+            return
+
+        if response.get("passed") is False:
+            self.set_feedback(
+                f"订单导入未通过。\n错误：{response.get('errors', [])}\n风险：{response.get('risks', [])}"
+            )
+            return
+
+        self.set_feedback("成功导入生产订单。")
+        self.refresh_data()
+
+    def on_order_double_clicked(self, row: int, column: int) -> None:
+        del column
+        if row >= len(self.order_rows):
+            return
+
+        order = self.order_rows[row]
+        order_id = _safe_text(order.get("order_id"))
+        if not order_id:
+            QMessageBox.warning(self, "订单缺失", "当前订单缺少订单ID，无法查询订单行。")
+            return
+
+        try:
+            payload = self.imports_api.get_order(order_id)
+        except BackendError as exc:
+            QMessageBox.critical(self, "获取订单详情失败", str(exc))
+            return
+
+        _, order_lines = _detail(payload)
+        if not order_lines:
+            QMessageBox.information(self, "无可分配订单行", f"订单 {order_id} 当前无可分配订单行。")
+            return
+
+        if not self.lot_rows:
+            self.load_lots()
+
+        dialog = OrderLineAssignDialog(
+            order_header=order,
+            order_lines=order_lines,
+            lots=self.lot_rows,
+            imports_api=self.imports_api,
+            parent=self,
+        )
+        if dialog.exec_() != QtWidgets.QDialog.Accepted or not dialog.result_data:
+            return
+
+        result = dialog.result_data
+        self.refresh_data()
+        action_text = "新建批次" if result.get("created_new") else "导入已有批次"
+        self.set_feedback(
+            "订单行导入完成：\n"
+            f"- 订单ID：{result.get('order_id', '')}\n"
+            f"- 订单行ID：{result.get('selected_line_ids', [])}\n"
+            f"- 目标批次：{result.get('lot_id', '')}\n"
+            f"- 操作类型：{action_text}"
+        )
+
+    def on_lot_double_clicked(self, row: int, column: int) -> None:
+        del column
+        if row >= len(self.lot_rows):
+            return
+
+        lot_summary = self.lot_rows[row]
+        lot_id = _safe_text(lot_summary.get("lot_id"))
+        if not lot_id:
+            QMessageBox.warning(self, "批次缺失", "当前批次缺少批次ID，无法查询批次详情。")
+            return
+
+        try:
+            lot_payload = self.imports_api.get_lot(lot_id)
+        except BackendError as exc:
+            QMessageBox.critical(self, "获取批次详情失败", str(exc))
+            return
+
+        lot_header, lot_lines = _detail(lot_payload)
+        dialog = LotDetailDialog(
+            lot_summary=lot_summary,
+            lot_header=lot_header,
+            lot_lines=lot_lines,
+            parent=self.controller,
+        )
+        if dialog.exec_() != QtWidgets.QDialog.Accepted or not dialog.next_request:
+            return
+
+        order_id = _safe_text(dialog.next_request.get("order_id"))
+        if not order_id:
+            self.set_feedback("无法进入下一步：当前批次缺少关联订单ID。")
+            return
+
+        try:
+            order_payload = self.imports_api.get_order(order_id)
+        except BackendError as exc:
+            self.set_feedback(f"获取关联订单失败：{exc}")
+            return
+
+        self.controller.context["current_lot"] = lot_payload
+        self.controller.context["current_order"] = order_payload
+        self.controller.context["current_lot_id"] = _safe_text(dialog.next_request.get("lot_id"))
+        self.controller.context["current_order_id"] = order_id
+        self.controller.show_page("stencil_page")
+
+    def ai_optimize_lots(self) -> None:
+        self.set_feedback("批次优化暂未接入。")
+
+    def ai_validate_lots(self) -> None:
+        if self.tblBatchOrders.rowCount() == 0:
+            self.set_feedback("当前无批次单可校验。")
+            return
+        self.set_feedback("批次兼容性校验暂未接入。")
+
+    def refresh_order_list(self) -> None:
+        _filter_table(self.tblProductionOrders, self.txtSearch.text())
+
+    def refresh_lot_list(self) -> None:
+        _filter_table(self.tblBatchOrders, self.txtSearch.text())

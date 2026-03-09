@@ -2,64 +2,143 @@
 <ui version="4.0">
   <class>MainWindow</class>
   <widget class="QMainWindow" name="MainWindow">
-    <property name="geometry">
-      <rect>
-        <x>0</x><y>0</y><width>1024</width><height>640</height>
-      </rect>
-    </property>
     <property name="windowTitle">
       <string>Versatile Robotics</string>
     </property>
+    <property name="minimumSize">
+      <size><width>1360</width><height>768</height></size>
+    </property>
+    <property name="styleSheet">
+      <string>
+        /* ===== Ant Design 全局样式 ===== */
+        QMainWindow {
+          background-color: #f0f2f5;
+        }
+        
+        /* 侧边导航 */
+        QFrame#sideNav {
+          background-color: #ffffff;
+          border: none;
+          border-radius: 8px;
+        }
+        
+        /* 导航按钮 */
+        QPushButton#btnImport, QPushButton#btnStencil, QPushButton#btnRoute,
+        QPushButton#btnPrepare, QPushButton#btnMonitor, QPushButton#btnKpi {
+          background-color: transparent;
+          border: none;
+          border-radius: 6px;
+          padding: 10px 12px;
+          text-align: left;
+          font-size: 13px;
+          color: #595959;
+          min-height: 24px;
+          max-height: 40px;
+        }
+        QPushButton#btnImport:hover, QPushButton#btnStencil:hover, QPushButton#btnRoute:hover,
+        QPushButton#btnPrepare:hover, QPushButton#btnMonitor:hover, QPushButton#btnKpi:hover {
+          background-color: #e6f7ff;
+          color: #1890ff;
+        }
+        QPushButton#btnImport:checked, QPushButton#btnStencil:checked, QPushButton#btnRoute:checked,
+        QPushButton#btnPrepare:checked, QPushButton#btnMonitor:checked, QPushButton#btnKpi:checked {
+          background-color: #e6f7ff;
+          color: #1890ff;
+          font-weight: 600;
+        }
+        
+        /* 标题 */
+        QLabel#appTitle {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1890ff;
+          padding: 12px 0;
+        }
+        
+        /* 状态栏 */
+        QStatusBar {
+          background-color: #ffffff;
+          border-top: 1px solid #f0f0f0;
+          font-size: 11px;
+          color: #8c8c8c;
+        }
+      </string>
+    </property>
+
     <widget class="QWidget" name="centralwidget">
-      <layout class="QHBoxLayout" name="horizontalLayout">
-        <!-- Left Panel -->
+      <layout class="QHBoxLayout" name="rootLayout">
+        <property name="spacing"><number>12</number></property>
+        <property name="leftMargin"><number>12</number></property>
+        <property name="topMargin"><number>12</number></property>
+        <property name="rightMargin"><number>12</number></property>
+        <property name="bottomMargin"><number>12</number></property>
+
+        <!-- 左侧导航 -->
         <item>
-          <widget class="QWidget" name="leftPanel">
-            <property name="minimumWidth"><number>180</number></property>
-            <layout class="QVBoxLayout" name="btnLayout">
+          <widget class="QFrame" name="sideNav">
+            <property name="minimumSize">
+              <size><width>160</width><height>0</height></size>
+            </property>
+            <property name="maximumSize">
+              <size><width>180</width><height>16777215</height></size>
+            </property>
+            <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+            <layout class="QVBoxLayout" name="sideNavLayout">
+              <property name="spacing"><number>4</number></property>
+              <property name="leftMargin"><number>10</number></property>
+              <property name="topMargin"><number>12</number></property>
+              <property name="rightMargin"><number>10</number></property>
+              <property name="bottomMargin"><number>12</number></property>
+
+              <item>
+                <widget class="QLabel" name="appTitle">
+                  <property name="text"><string>🤖 Versatile</string></property>
+                </widget>
+              </item>
+
               <item>
                 <widget class="QPushButton" name="btnImport">
-                  <property name="text"><string>生产任务</string></property>
+                  <property name="text"><string>📋  生产任务</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                  <property name="checked"><bool>true</bool></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QPushButton" name="btnStencil">
+                  <property name="text"><string>🎨  网版设计</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
-                <widget class="QPushButton" name="btnLayering">
-                  <property name="text"><string>网版设计</string></property>
-                  <property name="checkable"><bool>true</bool></property>
-                </widget>
-              </item>
-              <item>
-                <widget class="QPushButton" name="btnRoutine">
-                  <property name="text"><string>工艺路线</string></property>
+                <widget class="QPushButton" name="btnRoute">
+                  <property name="text"><string>🛤️  工艺路线</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
                 <widget class="QPushButton" name="btnPrepare">
-                  <property name="text"><string>生产准备</string></property>
+                  <property name="text"><string>⚙️  生产准备</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
-                <widget class="QPushButton" name="btnMonitoring">
-                  <property name="text"><string>生产监控</string></property>
+                <widget class="QPushButton" name="btnMonitor">
+                  <property name="text"><string>📊  生产监控</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
               <item>
-                <widget class="QPushButton" name="btnEvaluation">
-                  <property name="text"><string>绩效评估</string></property>
+                <widget class="QPushButton" name="btnKpi">
+                  <property name="text"><string>📈  绩效评估</string></property>
                   <property name="checkable"><bool>true</bool></property>
                 </widget>
               </item>
+
               <item>
-                <spacer name="verticalSpacer">
+                <spacer name="sideSpacer">
                   <property name="orientation"><enum>Qt::Vertical</enum></property>
-                  <property name="sizeHint" >
-                    <size>
-                      <width>20</width><height>40</height>
-                    </size>
+                  <property name="sizeHint" stdset="0">
+                    <size><width>20</width><height>40</height></size>
                   </property>
                 </spacer>
               </item>
@@ -67,15 +146,24 @@
           </widget>
         </item>
 
-        <!-- Right stacked content area -->
+        <!-- 右侧内容区 -->
         <item>
-          <widget class="QStackedWidget" name="stackedRight">
-            <!-- Dynamic content -->
+          <widget class="QStackedWidget" name="stackedPages">
+            <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>1</horstretch>
+                <verstretch>1</verstretch>
+              </sizepolicy>
+            </property>
           </widget>
         </item>
+
       </layout>
     </widget>
+
+    <widget class="QStatusBar" name="statusbar"/>
   </widget>
+
   <resources/>
   <connections/>
 </ui>

@@ -1,94 +1,279 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ImportPage</class>
- <widget class="QWidget" name="ImportPage">
-  <layout class="QHBoxLayout" name="mainHorizontalLayout">
-   <!-- Task editor panel (left, stretch = 1) -->
-   <item stretch="1">
-    <widget class="QWidget" name="taskPanel">
-     <layout class="QVBoxLayout" name="taskVerticalLayout">
-      <!-- Top: scrollable text area (stretch 10) -->
-      <item stretch="10">
-       <widget class="QScrollArea" name="instructionsScroll">
-        <property name="widgetResizable"><bool>true</bool></property>
-        <property name="styleSheet">
-         <string>border:1px solid #888888; background-color:white;</string>
-        </property>
-        <widget class="QWidget" name="instructionsWidget">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>1</horstretch><verstretch>1</verstretch>
-          </sizepolicy>
-         </property>
-         <layout class="QFormLayout" name="instructionsFormLayout"/>
+  <class>ImportTaskPage</class>
+
+  <widget class="QWidget" name="ImportTaskPage">
+    <property name="styleSheet">
+      <string>
+        /* ===== Ant Design 页面样式 ===== */
+        QWidget#ImportTaskPage {
+          background-color: #f0f2f5;
+        }
+
+        /* 主要按钮 */
+        QPushButton {
+          background-color: #ffffff;
+          border: 1px solid #d9d9d9;
+          border-radius: 6px;
+          padding: 6px 12px;
+          font-size: 13px;
+          color: #333333;
+          min-height: 28px;
+          max-height: 36px;
+        }
+        QPushButton:hover {
+          color: #1890ff;
+          border-color: #1890ff;
+        }
+        QPushButton:pressed {
+          color: #096dd9;
+          border-color: #096dd9;
+        }
+
+        /* 绿色关键操作按钮 */
+        QPushButton#btnSyncErp, QPushButton#btnImportOrder, QPushButton#btnImportBatch,
+        QPushButton#btnAIOptimize, QPushButton#btnValidate {
+          background-color: #52c41a;
+          border-color: #52c41a;
+          color: #ffffff;
+          font-weight: 600;
+        }
+        QPushButton#btnSyncErp:hover, QPushButton#btnImportOrder:hover, QPushButton#btnImportBatch:hover,
+        QPushButton#btnAIOptimize:hover, QPushButton#btnValidate:hover {
+          background-color: #73d13d;
+          border-color: #73d13d;
+        }
+        QPushButton#btnSyncErp:pressed, QPushButton#btnImportOrder:pressed, QPushButton#btnImportBatch:pressed,
+        QPushButton#btnAIOptimize:pressed, QPushButton#btnValidate:pressed {
+          background-color: #389e0d;
+          border-color: #389e0d;
+        }
+
+        /* 卡片样式 */
+        QFrame#topBar, QFrame#searchBar, QFrame#orderCard, QFrame#batchCard, QFrame#infoCard {
+          background-color: #ffffff;
+          border: 1px solid #f0f0f0;
+          border-radius: 8px;
+        }
+
+        /* 输入框 */
+        QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {
+          background-color: #ffffff;
+          border: 1px solid #d9d9d9;
+          border-radius: 4px;
+          padding: 4px 8px;
+          font-size: 13px;
+          min-height: 26px;
+          max-height: 32px;
+        }
+        QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QComboBox:focus {
+          border-color: #1890ff;
+        }
+        QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover, QDateEdit:hover, QComboBox:hover {
+          border-color: #40a9ff;
+        }
+
+        /* 表格样式 */
+        QTableView, QTableWidget {
+          background-color: #ffffff;
+          border: 1px solid #f0f0f0;
+          border-radius: 4px;
+          gridline-color: #f0f0f0;
+          font-size: 13px;
+        }
+        QTableView::item, QTableWidget::item {
+          padding: 8px;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        QTableView::item:selected, QTableWidget::item:selected {
+          background-color: #e6f7ff;
+          color: #1890ff;
+        }
+        QHeaderView::section {
+          background-color: #fafafa;
+          border: none;
+          border-bottom: 1px solid #f0f0f0;
+          padding: 8px;
+          font-weight: 600;
+          font-size: 13px;
+          color: #262626;
+        }
+
+        QLabel { font-size: 13px; color: #262626; }
+        QLabel#stepsLabel { font-size: 12px; color: #8c8c8c; }
+        QLabel#lblOrderTitle, QLabel#lblBatchTitle, QLabel#lblInfoTitle {
+          font-size: 14px; font-weight: 600; color: #262626;
+        }
+
+        QSplitter::handle { background-color: #f0f0f0; width: 12px; }
+        QSplitter::handle:hover { background-color: #1890ff; }
+      </string>
+    </property>
+
+    <layout class="QVBoxLayout" name="mainLayout">
+      <property name="spacing"><number>12</number></property>
+      <property name="leftMargin"><number>0</number></property>
+      <property name="topMargin"><number>0</number></property>
+      <property name="rightMargin"><number>0</number></property>
+      <property name="bottomMargin"><number>0</number></property>
+
+      <!-- 1) 顶部控制栏 -->
+      <item>
+        <widget class="QFrame" name="topBar">
+          <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+          <property name="maximumSize"><size><width>16777215</width><height>60</height></size></property>
+          <layout class="QHBoxLayout" name="topBarLayout">
+            <property name="leftMargin"><number>16</number></property>
+            <property name="topMargin"><number>10</number></property>
+            <property name="rightMargin"><number>16</number></property>
+            <property name="bottomMargin"><number>10</number></property>
+            <property name="spacing"><number>12</number></property>
+
+            <item>
+              <widget class="QLabel" name="stepsLabel">
+                <property name="text">
+                  <string>① 产生批次 → ② 设计网版 → ③设计工艺路线 → ④ 准备生产 → ⑤ 生产监控 → ⑥ 绩效评估</string>
+                </property>
+              </widget>
+            </item>
+
+            <item>
+              <spacer name="topSpacer">
+                <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+              </spacer>
+            </item>
+
+            <item><widget class="QPushButton" name="btnSyncErp"><property name="text"><string>🔄 ERP同步</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnImportOrder"><property name="text"><string>📥 本地导入</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnAIOptimize"><property name="text"><string>🤖 AI优化</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnValidate"><property name="text"><string>✓ AI校验</string></property></widget></item>
+          </layout>
         </widget>
-       </widget>
       </item>
-      <!-- Bottom: buttons (stretch 1) -->
-      <item stretch="1">
-       <layout class="QHBoxLayout" name="taskButtonsLayout">
-        <item stretch="1">
-         <widget class="QPushButton" name="btnSelectTask">
-          <property name="text"><string>导入任务单</string></property>
-          <property name="minimumHeight"><number>32</number></property>
-         </widget>
-        </item>
-        <item stretch="1">
-         <widget class="QPushButton" name="btnEditTask">
-          <property name="text"><string>编辑任务单</string></property>
-          <property name="minimumHeight"><number>32</number></property>
-         </widget>
-        </item>
-       </layout>
+
+      <!-- 2) 搜索栏 -->
+      <item>
+        <widget class="QFrame" name="searchBar">
+          <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+          <property name="maximumSize"><size><width>16777215</width><height>60</height></size></property>
+          <layout class="QHBoxLayout" name="searchBarLayout">
+            <property name="leftMargin"><number>12</number></property>
+            <property name="topMargin"><number>8</number></property>
+            <property name="rightMargin"><number>12</number></property>
+            <property name="bottomMargin"><number>8</number></property>
+            <property name="spacing"><number>10</number></property>
+
+            <item>
+              <widget class="QComboBox" name="cmbPriority">
+                <property name="minimumSize"><size><width>140</width><height>0</height></size></property>
+                <item><property name="text"><string>优先级：全部</string></property></item>
+                <item><property name="text"><string>🔴 高优先级</string></property></item>
+                <item><property name="text"><string>🟡 中优先级</string></property></item>
+                <item><property name="text"><string>🟢 低优先级</string></property></item>
+              </widget>
+            </item>
+
+            <item>
+              <widget class="QLineEdit" name="txtSearch">
+                <property name="placeholderText"><string>🔍 搜索订单ID/客户ID/批次ID/产线编号...</string></property>
+              </widget>
+            </item>
+          </layout>
+        </widget>
       </item>
-     </layout>
-    </widget>
-   </item>
-   <!-- Design preview panel (right, stretch = 2) -->
-   <item stretch="2">
-    <widget class="QWidget" name="designPanel">
-     <layout class="QVBoxLayout" name="designVerticalLayout">
-      <!-- Top: SVG preview (stretch 10) -->
-      <item stretch="10">
-       <!-- patternDesign changed from QLabel to QWebEngineView -->
-       <widget class="QWebEngineView" name="patternDesign">
-        <property name="styleSheet">
-         <string>border:1px solid #888888; background-color:white;</string>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch><verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-       </widget>
+
+      <!-- 3) 生产订单栏 & 批次单栏 -->
+      <item>
+        <widget class="QSplitter" name="tablesSplitter">
+          <property name="orientation"><enum>Qt::Horizontal</enum></property>
+          <property name="childrenCollapsible"><bool>false</bool></property>
+          <property name="handleWidth"><number>12</number></property>
+          <widget class="QFrame" name="orderCard">
+            <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+            <layout class="QVBoxLayout" name="orderCardLayout">
+              <property name="leftMargin"><number>12</number></property>
+              <property name="topMargin"><number>10</number></property>
+              <property name="rightMargin"><number>12</number></property>
+              <property name="bottomMargin"><number>12</number></property>
+              <item>
+                <widget class="QLabel" name="lblOrderTitle">
+                  <property name="text"><string>📋 生产订单</string></property>
+                </widget>
+              </item>
+              <item>
+                <widget class="QTableWidget" name="tblProductionOrders">
+                  <property name="columnCount"><number>6</number></property>
+                  <property name="rowCount"><number>0</number></property>
+                  <property name="alternatingRowColors"><bool>true</bool></property>
+                  <property name="selectionBehavior"><enum>QAbstractItemView::SelectRows</enum></property>
+                  <attribute name="horizontalHeaderStretchLastSection"><bool>true</bool></attribute>
+                  <column><property name="text"><string>订单ID</string></property></column>
+                  <column><property name="text"><string>客户ID</string></property></column>
+                  <column><property name="text"><string>下单日期</string></property></column>
+                  <column><property name="text"><string>交付日期</string></property></column>
+                  <column><property name="text"><string>进度</string></property></column>
+                  <column><property name="text"><string>状态</string></property></column>
+                </widget>
+              </item>
+            </layout>
+          </widget>
+          <widget class="QFrame" name="batchCard">
+            <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+            <layout class="QVBoxLayout" name="batchCardLayout">
+              <property name="leftMargin"><number>12</number></property>
+              <property name="topMargin"><number>10</number></property>
+              <property name="rightMargin"><number>12</number></property>
+              <property name="bottomMargin"><number>12</number></property>
+              <item><widget class="QLabel" name="lblBatchTitle"><property name="text"><string>🧾 批次单</string></property></widget></item>
+              <item>
+                <widget class="QTableWidget" name="tblBatchOrders">
+                  <property name="columnCount"><number>6</number></property>
+                  <property name="rowCount"><number>0</number></property>
+                  <property name="alternatingRowColors"><bool>true</bool></property>
+                  <property name="selectionBehavior"><enum>QAbstractItemView::SelectRows</enum></property>
+                  <attribute name="horizontalHeaderStretchLastSection"><bool>true</bool></attribute>
+                  <column><property name="text"><string>关联订单ID</string></property></column>
+                  <column><property name="text"><string>批次ID</string></property></column>
+                  <column><property name="text"><string>开始时间</string></property></column>
+                  <column><property name="text"><string>产线编号</string></property></column>
+                  <column><property name="text"><string>进度</string></property></column>
+                  <column><property name="text"><string>状态</string></property></column>
+                </widget>
+              </item>
+            </layout>
+          </widget>
+        </widget>
       </item>
-      <!-- Bottom: Next button (stretch 1) -->
-      <item stretch="1">
-       <layout class="QHBoxLayout" name="nextButtonLayout">
-        <property name="spacing"><number>0</number></property>
-        <property name="alignment"><set>Qt::AlignHCenter</set></property>
-        <item>
-         <widget class="QPushButton" name="btnNextStep">
-          <property name="text"><string>下一步</string></property>
-          <property name="enabled"><bool>false</bool></property>
-          <property name="minimumSize">
-           <size><width>120</width><height>36</height></size>
-          </property>
-         </widget>
-        </item>
-       </layout>
+
+      <!-- 4) 信息栏 -->
+      <item>
+        <widget class="QFrame" name="infoCard">
+          <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+          <property name="minimumSize"><size><width>0</width><height>120</height></size></property>
+          <property name="maximumSize"><size><width>16777215</width><height>180</height></size></property>
+          <layout class="QVBoxLayout" name="infoCardLayout">
+            <property name="leftMargin"><number>12</number></property>
+            <property name="topMargin"><number>10</number></property>
+            <property name="rightMargin"><number>12</number></property>
+            <property name="bottomMargin"><number>10</number></property>
+            <item>
+              <widget class="QLabel" name="lblInfoTitle">
+                <property name="text"><string>ℹ️ 校验反馈信息</string></property>
+              </widget>
+            </item>
+            <item>
+              <widget class="QTextEdit" name="txtValidationFeedback">
+                <property name="readOnly"><bool>true</bool></property>
+                <property name="placeholderText"><string>显示 AI 校验、字段完整性校验、资源冲突校验等反馈信息...</string></property>
+              </widget>
+            </item>
+          </layout>
+        </widget>
       </item>
-     </layout>
-    </widget>
-   </item>
-  </layout>
- </widget>
- <customwidgets>
-  <customwidget class="QWebEngineView" name="QWebEngineView">
-   <header>PyQt5.QtWebEngineWidgets</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
- <resources/>
- <connections/>
+    </layout>
+  </widget>
+
+  <resources/>
+  <connections/>
 </ui>

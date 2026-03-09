@@ -5,9 +5,9 @@ from PyQt5.QtCore import QRectF, QPointF, Qt
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QGraphicsSimpleTextItem
 from utilities.constants import DEFAULT_ROUTINE_LISTS
+from utilities.backend_client import BackendError
 import xml.etree.ElementTree as ET
 from pathlib import Path
-import requests
 
         
 
@@ -17,7 +17,7 @@ class PreparePage(QtWidgets.QWidget):
     
     def __init__(self, controller):
         super().__init__()
-        uic.loadUi("forms/prepare_page.ui", self)
+        uic.loadUi(str(Path(__file__).resolve().parent / "forms" / "prep_page.ui"), self)
         self.controller = controller
         self.prep = self.controller.context["prep_instructions"]
         if not self.prep:
@@ -89,20 +89,12 @@ class PreparePage(QtWidgets.QWidget):
             "prepInstructions": prep_instructions
         }
         
-        url = f"http://127.0.0.1:8000/tasks/{task_id}/dispatch_prep"
         try:
-            resp = requests.post(url, json=payload, timeout=10)
-        except Exception as exc:
+            data = self.controller.backend.workflow.dispatch_prep(str(task_id), payload)
+        except BackendError as exc:
             QMessageBox.critical(self, "请求失败", str(exc))
             return
-        
-        if not resp.ok:
-            print(f"Response error: {resp.status_code}, {resp.text}")
-            QMessageBox.critical(self, "分发失败", f"状态码: {resp.status_code}\n{resp.text}")
-            return
-        
-        # Print response
-        data = resp.json()
+
         self.controller.context["dispatch_result"] = data
         print("Dispatch prep response:")
         print(data)

@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+  <class>PrepPage</class>
+  <widget class="QWidget" name="PrepPage">
+    <property name="styleSheet">
+      <string>
+        QWidget#PrepPage { background-color: #f0f2f5; }
+
+        QPushButton {
+          background-color: #ffffff;
+          border: 1px solid #d9d9d9;
+          border-radius: 6px;
+          padding: 6px 12px;
+          font-size: 13px;
+          color: #333333;
+          min-height: 28px;
+          max-height: 36px;
+        }
+        QPushButton:hover { background-color: #fafafa; border-color: #40a9ff; color: #1890ff; }
+        QPushButton:pressed { background-color: #f0f0f0; border-color: #1890ff; }
+
+        /* 关键操作按钮：统一绿色 */
+        QPushButton#btnVersionLib, QPushButton#btnLocalImport, QPushButton#btnAIOptimize, QPushButton#btnValidate {
+          background-color: #52c41a;
+          border-color: #52c41a;
+          color: #ffffff;
+          border: none;
+          font-weight: 600;
+        }
+        QPushButton#btnVersionLib:hover, QPushButton#btnLocalImport:hover, QPushButton#btnAIOptimize:hover, QPushButton#btnValidate:hover {
+          background-color: #73d13d;
+          border-color: #73d13d;
+        }
+        QPushButton#btnVersionLib:pressed, QPushButton#btnLocalImport:pressed, QPushButton#btnAIOptimize:pressed, QPushButton#btnValidate:pressed {
+          background-color: #389e0d;
+          border-color: #389e0d;
+        }
+
+        /* 主动作按钮：蓝色 */
+        QPushButton#btnDispatch {
+          background-color: #1890ff;
+          border-color: #1890ff;
+          color: #ffffff;
+          border: none;
+          font-weight: 600;
+        }
+        QPushButton#btnDispatch:hover { background-color: #40a9ff; border-color: #40a9ff; }
+        QPushButton#btnDispatch:pressed { background-color: #096dd9; border-color: #096dd9; }
+
+        /* 指令类别 tab（保留现有结构，仅视觉统一） */
+        QPushButton#tabStencil, QPushButton#tabMaterial, QPushButton#tabInk, QPushButton#tabEquipment {
+          background-color: #f5f6f8;
+          border: 1px solid #f0f0f0;
+          border-radius: 8px;
+          min-height: 24px;
+          max-height: 24px;
+          padding: 0 14px;
+          font-size: 12px;
+          color: #666666;
+        }
+        QPushButton#tabEquipment {
+          background-color: #1677ff;
+          border-color: #1677ff;
+          color: #ffffff;
+          font-weight: 600;
+        }
+
+        QFrame#topBar, QFrame#workCard, QFrame#stateBar, QFrame#objectCard, QFrame#instructionCard, QFrame#validationCard, QFrame#metaStrip {
+          background-color: #ffffff;
+          border: 1px solid #f0f0f0;
+          border-radius: 8px;
+        }
+
+        QLabel { font-size: 13px; color: #262626; }
+        QLabel#stepsLabel { font-size: 12px; color: #8c8c8c; }
+        QLabel#lblObjectTitle, QLabel#lblInstructionTitle, QLabel#lblValidationTitle {
+          font-size: 14px;
+          font-weight: 600;
+          color: #262626;
+        }
+
+        QLabel#chipDraft, QLabel#chipGap, QLabel#chipHigh, QLabel#chipMid {
+          border-radius: 8px;
+          padding: 1px 8px;
+          font-size: 11px;
+        }
+        QLabel#chipDraft, QLabel#chipGap { background-color: #fffbf0; border: 1px solid #ffc53d; color: #ad5d00; }
+        QLabel#chipHigh { background-color: #fff1f0; border: 1px solid #ff7875; color: #a8071a; }
+        QLabel#chipMid { background-color: #e6f7ff; border: 1px solid #69c0ff; color: #0050b3; }
+
+        QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {
+          background-color: #ffffff;
+          border: 1px solid #d9d9d9;
+          border-radius: 4px;
+          padding: 4px 8px;
+          font-size: 13px;
+          min-height: 26px;
+          max-height: 32px;
+        }
+        QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QComboBox:focus { border-color: #1890ff; }
+        QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover, QDateEdit:hover, QComboBox:hover { border-color: #40a9ff; }
+
+        /* 补齐与其他页一致的表格规范（即使当前页暂未使用 QTableWidget） */
+        QTableView, QTableWidget {
+          background-color: #ffffff;
+          border: 1px solid #f0f0f0;
+          border-radius: 4px;
+          gridline-color: #f0f0f0;
+          font-size: 13px;
+        }
+        QTableView::item, QTableWidget::item {
+          padding: 8px;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        QTableView::item:selected, QTableWidget::item:selected {
+          background-color: #e6f7ff;
+          color: #1890ff;
+        }
+        QHeaderView::section {
+          background-color: #fafafa;
+          border: none;
+          border-bottom: 1px solid #f0f0f0;
+          padding: 8px;
+          font-weight: 600;
+          font-size: 13px;
+          color: #262626;
+        }
+
+        QListWidget, QTextEdit {
+          background-color: #fafafa;
+          border: 1px solid #f0f0f0;
+          border-radius: 4px;
+          font-size: 13px;
+        }
+        QListWidget::item { padding: 8px; border-bottom: 1px solid #f0f0f0; }
+        QListWidget::item:selected { background-color: #e6f7ff; color: #1890ff; }
+
+        QFrame#feedbackPanel {
+          background-color: #fffbf0;
+          border: 1px solid #ffc53d;
+          border-radius: 8px;
+        }
+
+        QSplitter::handle { background-color: #f0f0f0; width: 12px; }
+        QSplitter::handle:hover { background-color: #1890ff; }
+      </string>
+    </property>
+
+    <layout class="QVBoxLayout" name="mainLayout">
+      <property name="spacing"><number>12</number></property>
+      <property name="leftMargin"><number>0</number></property>
+      <property name="topMargin"><number>0</number></property>
+      <property name="rightMargin"><number>0</number></property>
+      <property name="bottomMargin"><number>0</number></property>
+
+      <!-- 1) 控制栏 -->
+      <item>
+        <widget class="QFrame" name="topBar">
+          <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+          <property name="maximumHeight"><number>60</number></property>
+          <layout class="QHBoxLayout" name="topBarLayout">
+            <property name="leftMargin"><number>14</number></property>
+            <property name="topMargin"><number>10</number></property>
+            <property name="rightMargin"><number>14</number></property>
+            <property name="bottomMargin"><number>10</number></property>
+            <property name="spacing"><number>10</number></property>
+
+            <item>
+              <widget class="QLabel" name="stepsLabel">
+                <property name="text"><string>① 产生批次 → ② 设计网版 → ③设计工艺路线 → ④ 准备生产 → ⑤ 生产监控 → ⑥ 绩效评估</string></property>
+              </widget>
+            </item>
+
+            <item>
+              <spacer name="topSpacer">
+                <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+              </spacer>
+            </item>
+
+            <item><widget class="QPushButton" name="btnVersionLib"><property name="text"><string>版本库</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnLocalImport"><property name="text"><string>本地导入</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnAIOptimize"><property name="text"><string>AI优化</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnValidate"><property name="text"><string>AI校验</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnDispatch"><property name="text"><string>下发指令</string></property></widget></item>
+          </layout>
+        </widget>
+      </item>
+
+      <!-- 2) 工作区域 -->
+      <item>
+        <widget class="QFrame" name="workCard">
+          <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+          <layout class="QVBoxLayout" name="workLayout">
+            <property name="leftMargin"><number>12</number></property>
+            <property name="topMargin"><number>12</number></property>
+            <property name="rightMargin"><number>12</number></property>
+            <property name="bottomMargin"><number>12</number></property>
+            <property name="spacing"><number>10</number></property>
+
+            <!-- 状态栏：左Tab + 右版本/风险 -->
+            <item>
+              <widget class="QFrame" name="stateBar">
+                <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                <property name="maximumHeight"><number>44</number></property>
+                <layout class="QHBoxLayout" name="stateBarLayout">
+                  <property name="leftMargin"><number>10</number></property>
+                  <property name="topMargin"><number>8</number></property>
+                  <property name="rightMargin"><number>10</number></property>
+                  <property name="bottomMargin"><number>8</number></property>
+                  <property name="spacing"><number>8</number></property>
+
+                  <item><widget class="QPushButton" name="tabStencil"><property name="text"><string>网版准备指令</string></property></widget></item>
+                  <item><widget class="QPushButton" name="tabMaterial"><property name="text"><string>物料准备指令</string></property></widget></item>
+                  <item><widget class="QPushButton" name="tabInk"><property name="text"><string>油墨胶浆准备指令</string></property></widget></item>
+                  <item><widget class="QPushButton" name="tabEquipment"><property name="text"><string>设备准备指令</string></property></widget></item>
+
+                  <item>
+                    <spacer name="stateSpacer">
+                      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                      <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+                    </spacer>
+                  </item>
+
+                  <item><widget class="QLabel" name="lblVersion"><property name="text"><string>当前版本：v12（草稿）</string></property></widget></item>
+                  <item><widget class="QLabel" name="chipDraft"><property name="text"><string>未冻结</string></property></widget></item>
+                  <item><widget class="QLabel" name="lblRisk"><property name="text"><string>风险：</string></property></widget></item>
+                  <item><widget class="QLabel" name="chipGap"><property name="text"><string>缺口 2</string></property></widget></item>
+                  <item><widget class="QLabel" name="chipHigh"><property name="text"><string>高 1</string></property></widget></item>
+                  <item><widget class="QLabel" name="chipMid"><property name="text"><string>中 3</string></property></widget></item>
+                  <item><widget class="QLabel" name="lblViewRisk"><property name="text"><string>查看</string></property><property name="styleSheet"><string>color:#1677ff;</string></property></widget></item>
+                </layout>
+              </widget>
+            </item>
+
+            <!-- 内容栏：左对象列表 + 右指令内容 -->
+            <item>
+              <widget class="QSplitter" name="contentSplitter">
+                <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                <property name="childrenCollapsible"><bool>false</bool></property>
+                <property name="handleWidth"><number>12</number></property>
+
+                <widget class="QFrame" name="objectCard">
+                  <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                  <property name="minimumWidth"><number>320</number></property>
+                  <layout class="QVBoxLayout" name="objectLayout">
+                    <property name="leftMargin"><number>12</number></property>
+                    <property name="topMargin"><number>10</number></property>
+                    <property name="rightMargin"><number>12</number></property>
+                    <property name="bottomMargin"><number>12</number></property>
+                    <property name="spacing"><number>8</number></property>
+                    <item><widget class="QLabel" name="lblObjectTitle"><property name="text"><string>对象列表（人/设备）</string></property></widget></item>
+                    <item><widget class="QLineEdit" name="txtSearchObject"><property name="placeholderText"><string>搜索：丝印机 / 烘干机 / 线长…</string></property></widget></item>
+                    <item>
+                      <widget class="QListWidget" name="listObjects">
+                        <item><property name="text"><string>设备 · 丝印机#1（待执行）</string></property></item>
+                        <item><property name="text"><string>设备 · 丝印机#2（风险）</string></property></item>
+                        <item><property name="text"><string>设备 · 烘干机#1（已确认）</string></property></item>
+                        <item><property name="text"><string>人员 · 线长-张三（待审核）</string></property></item>
+                      </widget>
+                    </item>
+                  </layout>
+                </widget>
+
+                <widget class="QFrame" name="instructionCard">
+                  <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                  <layout class="QVBoxLayout" name="instructionLayout">
+                    <property name="leftMargin"><number>12</number></property>
+                    <property name="topMargin"><number>10</number></property>
+                    <property name="rightMargin"><number>12</number></property>
+                    <property name="bottomMargin"><number>12</number></property>
+                    <property name="spacing"><number>8</number></property>
+
+                    <item>
+                      <layout class="QHBoxLayout" name="instructionTitleLayout">
+                        <item><widget class="QLabel" name="lblInstructionTitle"><property name="text"><string>指令内容栏</string></property></widget></item>
+                        <item><widget class="QLabel" name="lblInstructionTarget"><property name="text"><string>对象：丝印机#2</string></property><property name="styleSheet"><string>color:#999999;font-size:12px;</string></property></widget></item>
+                        <item>
+                          <spacer name="instructionTitleSpacer">
+                            <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                            <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+                          </spacer>
+                        </item>
+                      </layout>
+                    </item>
+
+                    <item>
+                      <widget class="QFrame" name="metaStrip">
+                        <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                        <property name="maximumHeight"><number>32</number></property>
+                        <layout class="QHBoxLayout" name="metaStripLayout">
+                          <property name="leftMargin"><number>10</number></property>
+                          <property name="topMargin"><number>6</number></property>
+                          <property name="rightMargin"><number>10</number></property>
+                          <property name="bottomMargin"><number>6</number></property>
+                          <item>
+                            <widget class="QLabel" name="lblMetaStrip">
+                              <property name="text"><string>版本：v12（草稿） · 最近保存：10:21 · 来源：工艺路线 v3 / 网版分层 v2 · 风险：缺口2 高1 中3（点击查看）</string></property>
+                              <property name="styleSheet"><string>color:#555555;font-size:11px;</string></property>
+                            </widget>
+                          </item>
+                        </layout>
+                      </widget>
+                    </item>
+
+                    <item>
+                      <widget class="QTextEdit" name="txtInstructionContent">
+                        <property name="plainText"><string>【设备准备指令】丝印机#2
+
+1) 点检：急停/气压/刮刀/治具定位；确认上次清洁记录。
+2) 程序：SOP-PRINT-8R80；参数：刮印 2 次；速度 120。
+3) 风险处置：丝印机#2 维护中 → 建议切换丝印机#3 或调整排产。
+4) 下发前回读：程序号/关键参数/版本号；记录操作人+时间戳。</string></property>
+                      </widget>
+                    </item>
+                  </layout>
+                </widget>
+              </widget>
+            </item>
+
+          </layout>
+        </widget>
+      </item>
+
+      <!-- 3) 校验反馈栏 -->
+      <item>
+        <widget class="QFrame" name="validationCard">
+          <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+          <property name="minimumHeight"><number>120</number></property>
+          <property name="maximumHeight"><number>140</number></property>
+          <layout class="QVBoxLayout" name="validationLayout">
+            <property name="leftMargin"><number>12</number></property>
+            <property name="topMargin"><number>10</number></property>
+            <property name="rightMargin"><number>12</number></property>
+            <property name="bottomMargin"><number>10</number></property>
+            <property name="spacing"><number>8</number></property>
+
+            <item><widget class="QLabel" name="lblValidationTitle"><property name="text"><string>校验反馈栏</string></property></widget></item>
+            <item>
+              <widget class="QFrame" name="feedbackPanel">
+                <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                <layout class="QVBoxLayout" name="feedbackPanelLayout">
+                  <property name="leftMargin"><number>10</number></property>
+                  <property name="topMargin"><number>8</number></property>
+                  <property name="rightMargin"><number>10</number></property>
+                  <property name="bottomMargin"><number>8</number></property>
+                  <item>
+                    <widget class="QLabel" name="lblValidationFeedback">
+                      <property name="text"><string>⚠ AI校验：发现 1 个高风险、2 个缺口（丝印机#2 维护中；订单行12 数量缺失）。处理建议：点击“查看风险”并补齐后再次执行 AI校验。</string></property>
+                      <property name="wordWrap"><bool>true</bool></property>
+                      <property name="styleSheet"><string>color:#ad5d00;</string></property>
+                    </widget>
+                  </item>
+                </layout>
+              </widget>
+            </item>
+          </layout>
+        </widget>
+      </item>
+
+    </layout>
+  </widget>
+  <resources/>
+  <connections/>
+</ui>

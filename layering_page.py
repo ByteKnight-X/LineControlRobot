@@ -1,12 +1,12 @@
 import re
 from pathlib import Path
-import requests
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtCore import QUrl
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon, QPixmap
+from utilities.backend_client import BackendError
 
 
 
@@ -16,7 +16,7 @@ class LayeringPage(QtWidgets.QWidget):
     """
     def __init__(self, controller):
         super().__init__()
-        uic.loadUi("forms/layering_page.ui", self)
+        uic.loadUi(str(Path(__file__).resolve().parent / "forms" / "separation_page.ui"), self)
         self.controller = controller
         self.separation_plan = controller.context.get("separation_plan")
         self.sop = controller.context.get("sop")     
@@ -393,23 +393,17 @@ class LayeringPage(QtWidgets.QWidget):
             "sop": self.sop,
         }
 
-        url = f"http://127.0.0.1:8000/tasks/{task_id}/generate_route"
         try:
-            resp = requests.post(url, json=payload, timeout=10)
-        except Exception as exc:
+            data = self.controller.backend.workflow.generate_route(str(task_id), payload)
+        except BackendError as exc:
             QtWidgets.QMessageBox.critical(self, "请求失败", str(exc))
             return
 
-        if not resp.ok:
-            QtWidgets.QMessageBox.critical(self, "生成失败", f"状态码: {resp.status_code}\n{resp.text}")
-            return
-
         # Fill context with response data
-        data = resp.json()
         self.controller.context["route"] = data.get("route")
         self.controller.context["sop"] = self.sop
         self.controller.context["separation_plan"] = self.separation_plan        
-        self.controller.show_page("routine_page", self.controller.btnRoutine)
+        self.controller.show_page("route_page")
 
 
 

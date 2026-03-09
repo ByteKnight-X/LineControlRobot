@@ -3,10 +3,10 @@ from PyQt5.QtWidgets import QGraphicsScene, QGraphicsRectItem, QGraphicsLineItem
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter, QPolygonF
 from PyQt5.QtCore import QRectF, QPointF, Qt, QEvent
 from utilities.constants import DEFAULT_ROUTINE_LISTS
+from utilities.backend_client import BackendError
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from PyQt5.QtWidgets import QGraphicsSimpleTextItem
-import requests, json
 from PyQt5.QtWidgets import QMessageBox
 
 
@@ -61,7 +61,7 @@ class RoutinePage(QtWidgets.QWidget):
     def __init__(self, controller):
         """Initialize routine page UI and logic."""
         super().__init__()
-        uic.loadUi("forms/routine_page.ui", self)
+        uic.loadUi(str(Path(__file__).resolve().parent / "forms" / "process_routine_page.ui"), self)
         self.controller = controller
         self.setup_ui()
     
@@ -384,9 +384,6 @@ class RoutinePage(QtWidgets.QWidget):
             QMessageBox.warning(self, "缺少 task_id", "未找到 task_id，无法确认工艺路线。")
             return
         
-        # Call backend API to confirm routine
-        url = f"http://127.0.0.1:8000/tasks/{task_id}/generate_prep"
-        
         raw_size_ranges = self.controller.context.get("task_order").get("码段")
         raw_quantities = self.controller.context.get("task_order").get("数量")
         
@@ -401,19 +398,13 @@ class RoutinePage(QtWidgets.QWidget):
         }
            
         try:
-            resp = requests.post(url, json=payload, timeout=10)
-        except Exception as exc:
+            data = self.controller.backend.workflow.generate_prep(str(task_id), payload)
+        except BackendError as exc:
             QMessageBox.critical(self, "请求失败", str(exc))
             return
 
-        if not resp.ok:
-            print(f"Response error: {resp.status_code}, {resp.text}")
-            QMessageBox.critical(self, "确认失败", f"状态码: {resp.status_code}\n{resp.text}")
-            return
-
         # Update context with prep instructions
-        data = resp.json()
         self.controller.context["prep_instructions"] = data['prepInstructions']
          
         # Navigate to prepare page
-        self.controller.show_page("prepare_page", self.controller.btnPrepare)
+        self.controller.show_page("prepare_page")
