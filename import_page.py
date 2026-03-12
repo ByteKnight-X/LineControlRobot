@@ -644,11 +644,24 @@ class ImportPage(QtWidgets.QWidget):
             self.set_feedback(f"获取关联订单失败：{exc}")
             return
 
+        lot_context = {
+            "lot_header": lot_payload.get("header", {}) if isinstance(lot_payload, dict) else {},
+            "lot_line": lot_payload.get("lines", []) if isinstance(lot_payload, dict) else [],
+        }
+        order_context = {
+            "order_header": order_payload.get("header", {}) if isinstance(order_payload, dict) else {},
+            "order_line": order_payload.get("lines", []) if isinstance(order_payload, dict) else [],
+        }
         self.controller.context["current_lot"] = lot_payload
         self.controller.context["current_order"] = order_payload
         self.controller.context["current_lot_id"] = _safe_text(dialog.next_request.get("lot_id"))
         self.controller.context["current_order_id"] = order_id
-        self.controller.show_page("stencil_page")
+        self.controller.context["lot_context"] = lot_context
+        self.controller.context["order_context"] = order_context
+        self.controller.context.setdefault("process_plan_context", {})
+        self.controller.context.setdefault("process_route_context", {})
+        self.controller.context.setdefault("constraint_context", {})
+        self.controller.show_page("separation_page")
 
     def ai_optimize_lots(self) -> None:
         self.set_feedback("批次优化暂未接入。")

@@ -32,6 +32,12 @@
         QPushButton#btnNext:hover { background-color: #40a9ff; }
         QPushButton#btnNext:pressed { background-color: #096dd9; }
 
+        QPushButton#btnPrevMesh, QPushButton#btnNextMesh {
+          min-width: 36px;
+          max-width: 36px;
+          padding: 4px 0;
+        }
+
         QFrame#topBar, QFrame#canvasCard, QFrame#grpSchemeMeta, QFrame#grpParams, QFrame#grpSOP, QFrame#validationCard {
           background-color: #ffffff; border: 1px solid #f0f0f0; border-radius: 8px;
         }
@@ -133,6 +139,12 @@
 
           <!-- 左栏：画布框 -->
           <widget class="QFrame" name="canvasCard">
+            <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>7</horstretch>
+                <verstretch>1</verstretch>
+              </sizepolicy>
+            </property>
             <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
             <layout class="QVBoxLayout" name="canvasLayout">
               <property name="leftMargin"><number>12</number></property>
@@ -148,11 +160,56 @@
               <item>
                 <widget class="QGraphicsView" name="graphicsPreview"/>
               </item>
+              <item>
+                <layout class="QHBoxLayout" name="meshNavigationLayout">
+                  <property name="spacing"><number>12</number></property>
+                  <item>
+                    <spacer name="meshNavLeftSpacer">
+                      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                      <property name="sizeHint" stdset="0">
+                        <size><width>40</width><height>20</height></size>
+                      </property>
+                    </spacer>
+                  </item>
+                  <item>
+                    <widget class="QPushButton" name="btnPrevMesh">
+                      <property name="text"><string>&lt;</string></property>
+                    </widget>
+                  </item>
+                  <item>
+                    <widget class="QLabel" name="lblMeshPager">
+                      <property name="text"><string>0 / 0</string></property>
+                      <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                      </property>
+                    </widget>
+                  </item>
+                  <item>
+                    <widget class="QPushButton" name="btnNextMesh">
+                      <property name="text"><string>&gt;</string></property>
+                    </widget>
+                  </item>
+                  <item>
+                    <spacer name="meshNavRightSpacer">
+                      <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                      <property name="sizeHint" stdset="0">
+                        <size><width>40</width><height>20</height></size>
+                      </property>
+                    </spacer>
+                  </item>
+                </layout>
+              </item>
             </layout>
           </widget>
 
           <!-- 右栏：元信息 + 参数 + SOP -->
           <widget class="QWidget" name="rightPane">
+            <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>3</horstretch>
+                <verstretch>1</verstretch>
+              </sizepolicy>
+            </property>
             <layout class="QVBoxLayout" name="rightPaneLayout">
               <property name="spacing"><number>12</number></property>
               <property name="leftMargin"><number>0</number></property>

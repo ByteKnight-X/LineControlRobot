@@ -28,6 +28,13 @@ class WorkflowRoutes:
     DISPATCH_PREP = "/tasks/{task_id}/dispatch_prep"
 
 
+class ProcessPlanRoutes:
+    LIST = "/process_plan/list"
+    DETAIL = "/process_plan/{process_plan_id}-{process_plan_version}"
+    VALIDATE = "/process_plan/validate"
+    APPROVE = "/process_plan/approve"
+
+
 class BackendClient:
     """Shared backend transport with domain-specific API groups."""
 
@@ -36,6 +43,7 @@ class BackendClient:
         self.base_url = (base_url or os.getenv("LINECONTROL_BACKEND_URL") or default_url).rstrip("/")
         self.imports = ImportApi(self)
         self.workflow = WorkflowApi(self)
+        self.process_plans = ProcessPlanApi(self)
 
     def _get_json(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = 10) -> Dict[str, Any]:
         try:
@@ -154,3 +162,44 @@ class WorkflowApi:
 
     def dispatch_prep(self, task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         return self._client._post_json(WorkflowRoutes.DISPATCH_PREP.format(task_id=task_id), payload)
+
+
+class ProcessPlanApi:
+    """Process-plan endpoints used by SeparationPage."""
+
+    def __init__(self, client: BackendClient) -> None:
+        self._client = client
+
+    def list(self) -> List[Dict[str, Any]]:
+        data = self._client._get_json(ProcessPlanRoutes.LIST)
+        process_plans = data.get("process_plans")
+        if not isinstance(process_plans, list):
+            raise BackendError("后端返回的历史方案列表结构无效。")
+        return [item for item in process_plans if isinstance(item, dict)]
+
+    def detail(self, process_plan_id: str, process_plan_version: int) -> Dict[str, Any]:
+        data = self._client._get_json(
+            ProcessPlanRoutes.DETAIL.format(
+                process_plan_id=process_plan_id,
+                process_plan_version=process_plan_version,
+            )
+        )
+        if not isinstance(data.get("process_plan_header"), dict) or not isinstance(
+            data.get("process_plan_line"), list
+        ):
+            raise BackendError("后端返回的方案详情结构无效。")
+        return data
+
+    def validate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self._client._post_json(ProcessPlanRoutes.VALIDATE, payload)
+        required_keys = ("passed", "errors", "risks")
+        if any(key not in data for key in required_keys):
+            raise BackendError("后端返回的校验结果结构无效。")
+        return data
+
+    def approve(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self._client._post_json(ProcessPlanRoutes.APPROVE, payload)
+        required_keys = ("approved", "process_plan_id", "process_plan_version", "status", "errors", "risks")
+        if any(key not in data for key in required_keys):
+            raise BackendError("后端返回的批准结果结构无效。")
+        return data

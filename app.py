@@ -4,10 +4,10 @@ from pathlib import Path
 from PyQt5 import QtWidgets, uic
 
 from import_page import ImportPage
-from layering_page import LayeringPage
 from monitor_page import MonitorPage
 from prepare_page import PreparePage
 from routine_page import RoutinePage
+from separation_page import SeparationPage
 from utilities.backend_client import BackendClient
 
 
@@ -38,7 +38,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._nav_buttons = {
             "import_page": self.btnImport,
-            "stencil_page": self.btnStencil,
+            "separation_page": self.btnStencil,
             "route_page": self.btnRoute,
             "prepare_page": self.btnPrepare,
             "monitor_page": self.btnMonitor,
@@ -46,7 +46,7 @@ class MainWindow(QtWidgets.QMainWindow):
         }
         self._page_factories = {
             "import_page": lambda: ImportPage(controller=self),
-            "stencil_page": lambda: LayeringPage(controller=self),
+            "separation_page": lambda: SeparationPage(controller=self),
             "route_page": lambda: RoutinePage(controller=self),
             "prepare_page": lambda: PreparePage(controller=self),
             "monitor_page": lambda: MonitorPage(controller=self),
@@ -60,6 +60,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show_page("import_page")
 
     def show_page(self, page_name: str) -> None:
+        if page_name == "stencil_page":
+            page_name = "separation_page"
         if page_name not in self.pages:
             factory = self._page_factories.get(page_name)
             if factory is None:
