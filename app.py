@@ -68,7 +68,11 @@ class MainWindow(QtWidgets.QMainWindow):
             factory = self._page_factories.get(page_name)
             if factory is None:
                 return
-            page = factory()
+            try:
+                page = factory()
+            except Exception as exc:
+                QtWidgets.QMessageBox.critical(self, "页面加载失败", f"{page_name} 加载失败：{exc}")
+                return
             self.stackedPages.addWidget(page)
             self.pages[page_name] = page
         page = self.pages[page_name]

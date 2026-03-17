@@ -1125,6 +1125,11 @@ class ProcessRoutePage(QtWidgets.QWidget):
             return
 
         self._sync_process_route_context()
+        self.controller.context.setdefault("order_context", {})
+        self.controller.context.setdefault("lot_context", {})
+        self.controller.context.setdefault("process_plan_context", {})
+        self.controller.context.setdefault("process_route_context", {})
+        self.controller.context.setdefault("constraint_context", {})
         if not hasattr(self.controller, "show_page"):
             QMessageBox.critical(self, "下一步", "主窗口未提供页面切换能力。")
             return
