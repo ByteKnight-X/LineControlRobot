@@ -727,4 +727,4 @@ class SeparationPage(QtWidgets.QWidget):
         if not hasattr(self.controller, "show_page"):
             QMessageBox.critical(self, "下一步", "主窗口未提供页面切换能力。")
             return
-        self.controller.show_page("route_page")
+        self.controller.show_page("process_route_page")

@@ -6,7 +6,7 @@ from PyQt5 import QtWidgets, uic
 from import_page import ImportPage
 from monitor_page import MonitorPage
 from prepare_page import PreparePage
-from routine_page import RoutinePage
+from routine_page import ProcessRoutePage
 from separation_page import SeparationPage
 from utilities.backend_client import BackendClient
 
@@ -39,7 +39,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._nav_buttons = {
             "import_page": self.btnImport,
             "separation_page": self.btnStencil,
-            "route_page": self.btnRoute,
+            "process_route_page": self.btnRoute,
             "prepare_page": self.btnPrepare,
             "monitor_page": self.btnMonitor,
             "kpi_page": self.btnKpi,
@@ -47,7 +47,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._page_factories = {
             "import_page": lambda: ImportPage(controller=self),
             "separation_page": lambda: SeparationPage(controller=self),
-            "route_page": lambda: RoutinePage(controller=self),
+            "process_route_page": lambda: ProcessRoutePage(controller=self),
             "prepare_page": lambda: PreparePage(controller=self),
             "monitor_page": lambda: MonitorPage(controller=self),
             "kpi_page": lambda: PlaceholderPage("绩效评估", "绩效评估页面暂未接入新的设计稿。"),
@@ -62,6 +62,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_page(self, page_name: str) -> None:
         if page_name == "stencil_page":
             page_name = "separation_page"
+        if page_name == "route_page":
+            page_name = "process_route_page"
         if page_name not in self.pages:
             factory = self._page_factories.get(page_name)
             if factory is None:

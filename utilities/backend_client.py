@@ -35,6 +35,13 @@ class ProcessPlanRoutes:
     APPROVE = "/process_plan/approve"
 
 
+class ProcessRouteRoutes:
+    LIST = "/process_route/list"
+    DETAIL = "/process_route/{process_route_id}/{process_route_version}"
+    VALIDATE = "/process_route/validate"
+    APPROVE = "/process_route/approve"
+
+
 class BackendClient:
     """Shared backend transport with domain-specific API groups."""
 
@@ -44,20 +51,46 @@ class BackendClient:
         self.imports = ImportApi(self)
         self.workflow = WorkflowApi(self)
         self.process_plans = ProcessPlanApi(self)
+        self.process_routes = ProcessRouteApi(self)
 
     def _get_json(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = 10) -> Dict[str, Any]:
         try:
             response = requests.get(self._url(path), params=params, timeout=timeout)
         except requests.RequestException as exc:
             raise BackendError(str(exc)) from exc
-        return self._decode(response)
+        data = self._decode_any(response)
+        if not isinstance(data, dict):
+            raise BackendError("后端返回的数据结构不是对象。")
+        return data
 
     def _post_json(self, path: str, payload: Optional[Dict[str, Any]] = None, timeout: int = 15) -> Dict[str, Any]:
         try:
             response = requests.post(self._url(path), json=payload or {}, timeout=timeout)
         except requests.RequestException as exc:
             raise BackendError(str(exc)) from exc
-        return self._decode(response)
+        data = self._decode_any(response)
+        if not isinstance(data, dict):
+            raise BackendError("后端返回的数据结构不是对象。")
+        return data
+
+    def _get_data(
+        self,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        timeout: int = 10,
+    ) -> Any:
+        try:
+            response = requests.get(self._url(path), params=params, timeout=timeout)
+        except requests.RequestException as exc:
+            raise BackendError(str(exc)) from exc
+        return self._decode_any(response)
+
+    def _post_data(self, path: str, payload: Optional[Dict[str, Any]] = None, timeout: int = 15) -> Any:
+        try:
+            response = requests.post(self._url(path), json=payload or {}, timeout=timeout)
+        except requests.RequestException as exc:
+            raise BackendError(str(exc)) from exc
+        return self._decode_any(response)
 
     def _post_xml(self, path: str, payload: bytes, timeout: int = 20) -> Dict[str, Any]:
         headers = {"Content-Type": "application/xml"}
@@ -65,7 +98,10 @@ class BackendClient:
             response = requests.post(self._url(path), data=payload, headers=headers, timeout=timeout)
         except requests.RequestException as exc:
             raise BackendError(str(exc)) from exc
-        return self._decode(response)
+        data = self._decode_any(response)
+        if not isinstance(data, dict):
+            raise BackendError("后端返回的数据结构不是对象。")
+        return data
 
     def _url(self, path: str) -> str:
         if path.startswith("http://") or path.startswith("https://"):
@@ -74,15 +110,13 @@ class BackendClient:
             path = f"/{path}"
         return f"{self.base_url}{path}"
 
-    def _decode(self, response: requests.Response) -> Dict[str, Any]:
+    def _decode_any(self, response: requests.Response) -> Any:
         if not response.ok:
             raise BackendError(f"状态码: {response.status_code}\n{response.text}")
         try:
             data = response.json()
         except ValueError as exc:
             raise BackendError("后端返回的不是合法 JSON。") from exc
-        if not isinstance(data, dict):
-            raise BackendError("后端返回的数据结构不是对象。")
         return data
 
 
@@ -203,3 +237,64 @@ class ProcessPlanApi:
         if any(key not in data for key in required_keys):
             raise BackendError("后端返回的批准结果结构无效。")
         return data
+
+
+class ProcessRouteApi:
+    """Process-route endpoints used by ProcessRoutePage."""
+
+    def __init__(self, client: BackendClient) -> None:
+        self._client = client
+
+    def list(self) -> List[Dict[str, Any]]:
+        data = self._client._get_data(ProcessRouteRoutes.LIST)
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        if isinstance(data, dict):
+            for key in ("process_routes", "items", "data", "list"):
+                value = data.get(key)
+                if isinstance(value, list):
+                    return [item for item in value if isinstance(item, dict)]
+        raise BackendError("后端返回的工艺路线列表结构无效。")
+
+    def detail(self, process_route_id: str, process_route_version: int) -> Dict[str, Any]:
+        data = self._client._get_json(
+            ProcessRouteRoutes.DETAIL.format(
+                process_route_id=process_route_id,
+                process_route_version=process_route_version,
+            )
+        )
+        return self._normalize_detail(data)
+
+    def validate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self._client._post_json(ProcessRouteRoutes.VALIDATE, payload)
+        required_keys = ("passed", "errors", "risks")
+        if any(key not in data for key in required_keys):
+            raise BackendError("后端返回的工艺路线校验结果结构无效。")
+        return data
+
+    def approve(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self._client._post_json(ProcessRouteRoutes.APPROVE, payload)
+        required_keys = ("passed", "errors", "risks", "process_route_id", "process_route_version")
+        if any(key not in data for key in required_keys):
+            raise BackendError("后端返回的工艺路线批准结果结构无效。")
+        if "status" not in data:
+            data["status"] = "validated"
+        return data
+
+    def _normalize_detail(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        header = data.get("process_route_header")
+        if not isinstance(header, dict):
+            header = data.get("process_router_header")
+        loops = data.get("process_route_loop_line")
+        steps = data.get("process_route_loop_step_line")
+        if not isinstance(steps, list):
+            steps = data.get("process_route_loop_step")
+
+        if not isinstance(header, dict) or not isinstance(loops, list) or not isinstance(steps, list):
+            raise BackendError("后端返回的工艺路线详情结构无效。")
+
+        return {
+            "process_route_header": header,
+            "process_route_loop_line": [item for item in loops if isinstance(item, dict)],
+            "process_route_loop_step_line": [item for item in steps if isinstance(item, dict)],
+        }
