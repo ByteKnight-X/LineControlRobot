@@ -146,8 +146,8 @@
 
             <item><widget class="QPushButton" name="btnSyncErp"><property name="text"><string>🔄 ERP同步</string></property></widget></item>
             <item><widget class="QPushButton" name="btnImportOrder"><property name="text"><string>📥 本地导入</string></property></widget></item>
-            <item><widget class="QPushButton" name="btnAIOptimize"><property name="text"><string>🤖 AI优化</string></property></widget></item>
-            <item><widget class="QPushButton" name="btnValidate"><property name="text"><string>✓ AI校验</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnAIOptimize"><property name="text"><string>🤖 自动生成</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnValidate"><property name="text"><string>✓ 批次校验</string></property></widget></item>
           </layout>
         </widget>
       </item>

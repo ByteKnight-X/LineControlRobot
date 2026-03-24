@@ -31,10 +31,22 @@ def _safe_text(value: Any) -> str:
     return "" if value is None else str(value)
 
 
-def _ms_to_datetime(ms: int | None, fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
-    if not ms:
+def _as_list(value: Any) -> List[Dict[str, Any]]:
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _ms_to_datetime(ms: Any, fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
+    if ms in (None, ""):
         return ""
-    dt = datetime.fromtimestamp(ms / 1000, tz=timezone.utc).astimezone()
+    try:
+        timestamp = int(ms)
+    except (TypeError, ValueError):
+        return ""
+    if timestamp <= 0:
+        return ""
+    if timestamp >= 10**12:
+        timestamp = timestamp / 1000
+    dt = datetime.fromtimestamp(timestamp, tz=timezone.utc).astimezone()
     return dt.strftime(fmt)
 
 
@@ -43,23 +55,33 @@ def _order_line_id(line: Dict[str, Any]) -> Any:
 
 
 def _orders(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    value = payload.get("orders")
-    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+    return _as_list(payload.get("orders") or payload.get("items"))
 
 
 def _lots(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    value = payload.get("lots")
-    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+    return _as_list(payload.get("lots") or payload.get("items"))
 
 
-def _detail(payload: Dict[str, Any]) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
-    header = payload.get("header")
-    lines = payload.get("lines")
+def _parse_order_detail(payload: Dict[str, Any]) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    header = payload.get("production_order_header") or payload.get("header")
+    lines = payload.get("production_order_line") or payload.get("lines") or payload.get("order_lines")
     if not isinstance(header, dict):
         header = {}
-    if not isinstance(lines, list):
-        lines = []
-    return header, [item for item in lines if isinstance(item, dict)]
+    return header, _as_list(lines)
+
+
+def _parse_lot_detail(payload: Dict[str, Any]) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    header = payload.get("lot_header") or payload.get("header")
+    lines = payload.get("lot_line") or payload.get("lines")
+    if not isinstance(header, dict):
+        header = {}
+    return header, _as_list(lines)
+
+
+def _display_order_id(value: Any) -> str:
+    if isinstance(value, list):
+        return ", ".join(_safe_text(item) for item in value if _safe_text(item))
+    return _safe_text(value)
 
 
 def _setup_table(
@@ -272,7 +294,7 @@ class OrderLineAssignDialog(QtWidgets.QDialog):
             self._set_status(f"读取批次 {lot_id} 失败：{exc}", is_error=True)
             return
 
-        _, lines = _detail(payload)
+        _, lines = _parse_lot_detail(payload)
         _fill_table(self.tblSelectedLotLines, [self._line_row(line) for line in lines])
 
         if lines:
@@ -332,6 +354,7 @@ class LotDetailDialog(QtWidgets.QDialog):
         lot_summary: Dict[str, Any],
         lot_header: Dict[str, Any],
         lot_lines: List[Dict[str, Any]],
+        allow_next_step: bool = True,
         parent: Optional[QtWidgets.QWidget] = None,
     ) -> None:
         super().__init__(parent)
@@ -339,9 +362,15 @@ class LotDetailDialog(QtWidgets.QDialog):
         self.lot_header = lot_header
         self.lot_lines = [line for line in lot_lines if isinstance(line, dict)]
         self.next_request: Optional[Dict[str, Any]] = None
+        self.allow_next_step = allow_next_step
 
         self.lot_id = _safe_text(lot_header.get("lot_id") or lot_summary.get("lot_id"))
-        self.order_id = _safe_text(lot_header.get("order_id") or lot_summary.get("order_id"))
+        self.order_id = _display_order_id(
+            lot_header.get("source_order_id")
+            or lot_header.get("order_id")
+            or lot_summary.get("source_order_id")
+            or lot_summary.get("order_id")
+        )
 
         self.setWindowTitle(f"批次详情 - {self.lot_id or '未命名批次'}")
         self.resize(980, 620)
@@ -384,6 +413,8 @@ class LotDetailDialog(QtWidgets.QDialog):
         self.btnNext.setStyleSheet(PRIMARY_BUTTON_STYLE)
         self.btnNext.clicked.connect(self.start_separation)
         button_row.addWidget(self.btnNext)
+        if not self.allow_next_step:
+            self.btnNext.hide()
 
         root.addLayout(button_row)
 
@@ -392,7 +423,14 @@ class LotDetailDialog(QtWidgets.QDialog):
         summary = self.lot_summary if isinstance(self.lot_summary, dict) else {}
 
         self.lblLotId.setText(_safe_text(header.get("lot_id") or summary.get("lot_id")))
-        self.lblOrderId.setText(_safe_text(header.get("order_id") or summary.get("order_id")))
+        self.lblOrderId.setText(
+            _display_order_id(
+                header.get("source_order_id")
+                or header.get("order_id")
+                or summary.get("source_order_id")
+                or summary.get("order_id")
+            )
+        )
         self.lblStartTime.setText(
             _ms_to_datetime(header.get("start_time_ms") or summary.get("start_time_ms"))
         )
@@ -422,8 +460,13 @@ class LotDetailDialog(QtWidgets.QDialog):
             self.lblFeedback.setText(f"当前批次包含 {len(self.lot_lines)} 条批次行。")
         else:
             self.lblFeedback.setText("当前批次详情未返回批次行。")
+        if not self.allow_next_step:
+            self.lblFeedback.setText(f"{self.lblFeedback.text()}\n候选批次单仅支持查看详情与校验结果。")
 
     def start_separation(self) -> None:
+        if not self.allow_next_step:
+            self.lblFeedback.setText("候选批次单不可进入下游页面。")
+            return
         if not self.order_id:
             self.lblFeedback.setText("当前批次缺少关联订单ID。")
             return
@@ -449,6 +492,9 @@ class ImportPage(QtWidgets.QWidget):
         self.imports_api = controller.backend.imports
         self.order_rows: List[Dict[str, Any]] = []
         self.lot_rows: List[Dict[str, Any]] = []
+        self.persisted_lot_rows: List[Dict[str, Any]] = []
+        self.pending_lot_rows: List[Dict[str, Any]] = []
+        self.pending_validation_results: Dict[str, Dict[str, Any]] = {}
         self.last_feedback_text = "请先通过“本地导入”读取生产订单。"
 
         self._setup_ui()
@@ -483,6 +529,95 @@ class ImportPage(QtWidgets.QWidget):
         self.load_orders()
         self.load_lots()
 
+    def _selected_order_ids(self) -> List[str]:
+        selection_model = self.tblProductionOrders.selectionModel()
+        if selection_model is None:
+            return []
+        selected_rows = sorted(index.row() for index in selection_model.selectedRows())
+        order_ids: List[str] = []
+        seen = set()
+        for row in selected_rows:
+            if row >= len(self.order_rows):
+                continue
+            order_id = _safe_text(self.order_rows[row].get("order_id"))
+            if order_id and order_id not in seen:
+                seen.add(order_id)
+                order_ids.append(order_id)
+        return order_ids
+
+    def _row_order_display(self, lot: Dict[str, Any]) -> str:
+        return _display_order_id(lot.get("source_order_id") or lot.get("order_id"))
+
+    def _format_validation_summary(self, summary: Dict[str, Any]) -> str:
+        lot_id = _safe_text(summary.get("lot_id"))
+        passed = summary.get("passed")
+        errors = summary.get("errors", [])
+        risk_info = summary.get("risk_info", [])
+        return (
+            f"- 批次ID：{lot_id or '未命名候选批次'}\n"
+            f"  passed: {passed}\n"
+            f"  errors: {errors}\n"
+            f"  risk_info: {risk_info}"
+        )
+
+    def _build_persisted_lot_row(self, lot: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "row_kind": "persisted",
+            "order_id_display": self._row_order_display(lot),
+            "lot_id": _safe_text(lot.get("lot_id")),
+            "start_time_ms": lot.get("start_time_ms"),
+            "production_line_id": _safe_text(lot.get("production_line_id")),
+            "progress": lot.get("progress", ""),
+            "status": _safe_text(lot.get("status")),
+            "lot_header": dict(lot),
+            "lot_line": [],
+            "validation_summary": {},
+        }
+
+    def _build_pending_lot_row(self, candidate: Dict[str, Any]) -> Dict[str, Any]:
+        header = candidate.get("lot_header")
+        lines = candidate.get("lot_line")
+        if not isinstance(header, dict) or not isinstance(lines, list):
+            raise BackendError("候选批次单结构无效。")
+        lot_id = _safe_text(header.get("lot_id"))
+        validation_summary = self.pending_validation_results.get(lot_id, {})
+        status = "candidate"
+        if validation_summary:
+            status = "candidate | validated" if validation_summary.get("passed") else "candidate | invalid"
+        return {
+            "row_kind": "pending",
+            "order_id_display": _display_order_id(header.get("source_order_id") or header.get("order_id")),
+            "lot_id": lot_id,
+            "start_time_ms": header.get("start_time_ms"),
+            "production_line_id": _safe_text(header.get("production_line_id")),
+            "progress": header.get("progress", ""),
+            "status": status,
+            "lot_header": header,
+            "lot_line": _as_list(lines),
+            "validation_summary": validation_summary,
+        }
+
+    def rebuild_lot_rows(self) -> None:
+        rows: List[Dict[str, Any]] = []
+        rows.extend(self._build_persisted_lot_row(lot) for lot in self.persisted_lot_rows if isinstance(lot, dict))
+        rows.extend(self._build_pending_lot_row(lot) for lot in self.pending_lot_rows if isinstance(lot, dict))
+        self.lot_rows = rows
+
+        table_rows = []
+        for lot in self.lot_rows:
+            table_rows.append(
+                [
+                    lot.get("order_id_display", ""),
+                    lot.get("lot_id", ""),
+                    _ms_to_datetime(lot.get("start_time_ms")),
+                    lot.get("production_line_id", ""),
+                    lot.get("progress", ""),
+                    lot.get("status", ""),
+                ]
+            )
+        _fill_table(self.tblBatchOrders, table_rows)
+        self.refresh_lot_list()
+
     def load_orders(self) -> None:
         try:
             payload = self.imports_api.list_orders()
@@ -512,28 +647,15 @@ class ImportPage(QtWidgets.QWidget):
     def load_lots(self) -> None:
         try:
             payload = self.imports_api.list_lots()
-            self.lot_rows = _lots(payload)
+            self.persisted_lot_rows = _lots(payload)
         except BackendError as exc:
+            self.persisted_lot_rows = []
             self.lot_rows = []
             self.tblBatchOrders.setRowCount(0)
             if "请先通过" not in self.last_feedback_text:
                 self.set_feedback(f"{self.last_feedback_text}\n\n批次列表刷新失败：{exc}")
             return
-
-        rows = []
-        for lot in self.lot_rows:
-            rows.append(
-                [
-                    lot.get("order_id", ""),
-                    lot.get("lot_id", ""),
-                    _ms_to_datetime(lot.get("start_time_ms")),
-                    lot.get("production_line_id", ""),
-                    lot.get("progress", ""),
-                    lot.get("status", ""),
-                ]
-            )
-        _fill_table(self.tblBatchOrders, rows)
-        self.refresh_lot_list()
+        self.rebuild_lot_rows()
 
     def sync_with_erp(self) -> None:
         self.set_feedback("ERP 暂未接入，当前仅支持本地导入。")
@@ -577,18 +699,18 @@ class ImportPage(QtWidgets.QWidget):
             QMessageBox.critical(self, "获取订单详情失败", str(exc))
             return
 
-        _, order_lines = _detail(payload)
+        _, order_lines = _parse_order_detail(payload)
         if not order_lines:
             QMessageBox.information(self, "无可分配订单行", f"订单 {order_id} 当前无可分配订单行。")
             return
 
-        if not self.lot_rows:
+        if not self.persisted_lot_rows:
             self.load_lots()
 
         dialog = OrderLineAssignDialog(
             order_header=order,
             order_lines=order_lines,
-            lots=self.lot_rows,
+            lots=self.persisted_lot_rows,
             imports_api=self.imports_api,
             parent=self,
         )
@@ -612,9 +734,21 @@ class ImportPage(QtWidgets.QWidget):
             return
 
         lot_summary = self.lot_rows[row]
+        row_kind = lot_summary.get("row_kind")
         lot_id = _safe_text(lot_summary.get("lot_id"))
         if not lot_id:
             QMessageBox.warning(self, "批次缺失", "当前批次缺少批次ID，无法查询批次详情。")
+            return
+
+        if row_kind == "pending":
+            dialog = LotDetailDialog(
+                lot_summary=lot_summary,
+                lot_header=lot_summary.get("lot_header", {}),
+                lot_lines=lot_summary.get("lot_line", []),
+                allow_next_step=False,
+                parent=self.controller,
+            )
+            dialog.exec_()
             return
 
         try:
@@ -623,11 +757,12 @@ class ImportPage(QtWidgets.QWidget):
             QMessageBox.critical(self, "获取批次详情失败", str(exc))
             return
 
-        lot_header, lot_lines = _detail(lot_payload)
+        lot_header, lot_lines = _parse_lot_detail(lot_payload)
         dialog = LotDetailDialog(
             lot_summary=lot_summary,
             lot_header=lot_header,
             lot_lines=lot_lines,
+            allow_next_step=True,
             parent=self.controller,
         )
         if dialog.exec_() != QtWidgets.QDialog.Accepted or not dialog.next_request:
@@ -644,14 +779,9 @@ class ImportPage(QtWidgets.QWidget):
             self.set_feedback(f"获取关联订单失败：{exc}")
             return
 
-        lot_context = {
-            "lot_header": lot_payload.get("header", {}) if isinstance(lot_payload, dict) else {},
-            "lot_line": lot_payload.get("lines", []) if isinstance(lot_payload, dict) else [],
-        }
-        order_context = {
-            "order_header": order_payload.get("header", {}) if isinstance(order_payload, dict) else {},
-            "order_line": order_payload.get("lines", []) if isinstance(order_payload, dict) else [],
-        }
+        order_header, order_lines = _parse_order_detail(order_payload)
+        lot_context = {"lot_header": lot_header, "lot_line": lot_lines}
+        order_context = {"order_header": order_header, "order_line": order_lines}
         self.controller.context["current_lot"] = lot_payload
         self.controller.context["current_order"] = order_payload
         self.controller.context["current_lot_id"] = _safe_text(dialog.next_request.get("lot_id"))
@@ -664,13 +794,80 @@ class ImportPage(QtWidgets.QWidget):
         self.controller.show_page("separation_page")
 
     def ai_optimize_lots(self) -> None:
-        self.set_feedback("批次优化暂未接入。")
+        order_ids = self._selected_order_ids()
+        if not order_ids:
+            self.set_feedback("请先在生产订单表中选择至少一条生产订单。")
+            return
+
+        try:
+            response = self.imports_api.generate_lots(selected_orders=order_ids)
+        except BackendError as exc:
+            self.set_feedback(f"候选批次单生成失败：{exc}")
+            return
+
+        lots = _as_list(response.get("lots"))
+        self.pending_lot_rows = lots
+        self.pending_validation_results = {}
+        self.rebuild_lot_rows()
+
+        summary_lines = [
+            "候选批次单生成完成：",
+            f"- 订单ID：{order_ids}",
+            f"- passed：{response.get('passed')}",
+            f"- message：{response.get('message', '')}",
+            f"- 候选批次数量：{len(lots)}",
+        ]
+        for candidate in lots:
+            header = candidate.get("lot_header", {})
+            lines = _as_list(candidate.get("lot_line"))
+            summary_lines.append(
+                (
+                    f"- lot_id：{_safe_text(header.get('lot_id')) or '未命名候选批次'}，"
+                    f" source_order_id：{_display_order_id(header.get('source_order_id') or header.get('order_id'))}，"
+                    f" line_count：{len(lines)}"
+                )
+            )
+        self.set_feedback("\n".join(summary_lines))
 
     def ai_validate_lots(self) -> None:
-        if self.tblBatchOrders.rowCount() == 0:
-            self.set_feedback("当前无批次单可校验。")
+        if not self.pending_lot_rows:
+            self.set_feedback("当前无候选批次单可校验。")
             return
-        self.set_feedback("批次兼容性校验暂未接入。")
+
+        pending_lots = []
+        for candidate in self.pending_lot_rows:
+            header = candidate.get("lot_header")
+            lines = candidate.get("lot_line")
+            if not isinstance(header, dict) or not isinstance(lines, list):
+                self.set_feedback("候选批次单结构无效，无法发起校验。")
+                return
+            pending_lots.append({"lot_header": header, "lot_line": _as_list(lines)})
+
+        try:
+            response = self.imports_api.validate_lots(pending_lots=pending_lots)
+        except BackendError as exc:
+            self.set_feedback(f"候选批次单校验失败：{exc}")
+            return
+
+        results = _as_list(response.get("validation_results"))
+        self.pending_validation_results = {
+            _safe_text(item.get("lot_id")): item for item in results if _safe_text(item.get("lot_id"))
+        }
+        self.rebuild_lot_rows()
+
+        passed_count = sum(1 for item in results if item.get("passed"))
+        failed_count = len(results) - passed_count
+        feedback_lines = [
+            "候选批次单校验完成：",
+            f"- 校验总数：{len(results)}",
+            f"- 通过数量：{passed_count}",
+            f"- 失败数量：{failed_count}",
+        ]
+        if response.get("message"):
+            feedback_lines.append(f"- message：{response.get('message')}")
+        for item in results:
+            feedback_lines.append(self._format_validation_summary(item))
+        self.set_feedback("\n".join(feedback_lines))
 
     def refresh_order_list(self) -> None:
         _filter_table(self.tblProductionOrders, self.txtSearch.text())

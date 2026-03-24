@@ -18,8 +18,8 @@ class ImportRoutes:
     LOT_DETAIL = "/lots/{lot_id}"
     LOT_VALIDATE = "/lots/{lot_id}/validate"
     LOTS_IMPORT_LINES = "/lots/import_lines"
-    AI_OPTIMIZE_LOTS = "/ai/optimize_lots"
-    AI_VALIDATE_PENDING_LOTS = "/ai/validate_pending_lots"
+    AI_GENERATE_LOTS = "/ai/generate_lots"
+    AI_VALIDATE_LOTS = "/ai/validate_lots"
 
 
 class WorkflowRoutes:
@@ -42,6 +42,13 @@ class ProcessRouteRoutes:
     APPROVE = "/process_route/approve"
 
 
+class PrepInstructionRoutes:
+    LIST = "/prep_instruction/list"
+    DETAIL = "/prep_instruction/{prep_instruction_id}/{prep_instruction_version}"
+    VALIDATE = "/prep_instruction/validate"
+    DISTRIBUTE = "/prep_instruction/distribute_instruction"
+
+
 class BackendClient:
     """Shared backend transport with domain-specific API groups."""
 
@@ -52,6 +59,7 @@ class BackendClient:
         self.workflow = WorkflowApi(self)
         self.process_plans = ProcessPlanApi(self)
         self.process_routes = ProcessRouteApi(self)
+        self.prep_instructions = PrepInstructionApi(self)
 
     def _get_json(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = 10) -> Dict[str, Any]:
         try:
@@ -164,22 +172,33 @@ class ImportApi:
     def validate_lot(self, lot_id: str) -> Dict[str, Any]:
         return self._client._post_json(ImportRoutes.LOT_VALIDATE.format(lot_id=lot_id))
 
-    def optimize_lots(
-        self,
-        order_id: str,
-        selected_order_line_ids: Optional[List[int]] = None,
-        dry_run: bool = False,
-    ) -> Dict[str, Any]:
-        payload: Dict[str, Any] = {
-            "order_id": order_id,
-            "dry_run": dry_run,
-        }
-        if selected_order_line_ids:
-            payload["selected_order_line_ids"] = selected_order_line_ids
-        return self._client._post_json(ImportRoutes.AI_OPTIMIZE_LOTS, payload)
+    def generate_lots(self, selected_orders: List[str]) -> Dict[str, Any]:
+        data = self._client._post_json(
+            ImportRoutes.AI_GENERATE_LOTS,
+            {"selected_orders": selected_orders},
+        )
+        lots = data.get("lots")
+        if not isinstance(lots, list):
+            raise BackendError("候选批次单结构无效。")
+        for item in lots:
+            if not isinstance(item, dict):
+                raise BackendError("候选批次单结构无效。")
+            if not isinstance(item.get("lot_header"), dict) or not isinstance(item.get("lot_line"), list):
+                raise BackendError("候选批次单结构无效。")
+        return data
 
-    def validate_pending_lots(self) -> Dict[str, Any]:
-        return self._client._post_json(ImportRoutes.AI_VALIDATE_PENDING_LOTS)
+    def validate_lots(self, pending_lots: List[Dict[str, Any]]) -> Dict[str, Any]:
+        data = self._client._post_json(
+            ImportRoutes.AI_VALIDATE_LOTS,
+            {"pending_lots": pending_lots},
+        )
+        results = data.get("validation_results")
+        if not isinstance(results, list):
+            raise BackendError("候选批次单校验结果结构无效。")
+        for item in results:
+            if not isinstance(item, dict):
+                raise BackendError("候选批次单校验结果结构无效。")
+        return data
 
 
 class WorkflowApi:
@@ -297,4 +316,70 @@ class ProcessRouteApi:
             "process_route_header": header,
             "process_route_loop_line": [item for item in loops if isinstance(item, dict)],
             "process_route_loop_step_line": [item for item in steps if isinstance(item, dict)],
+        }
+
+
+class PrepInstructionApi:
+    """Production-preparation endpoints used by PreparePage."""
+
+    def __init__(self, client: BackendClient) -> None:
+        self._client = client
+
+    def list(self) -> List[Dict[str, Any]]:
+        data = self._client._get_data(PrepInstructionRoutes.LIST)
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        if isinstance(data, dict):
+            for key in ("prep_instructions", "items", "data", "list"):
+                value = data.get(key)
+                if isinstance(value, list):
+                    return [item for item in value if isinstance(item, dict)]
+        raise BackendError("后端返回的生产准备列表结构无效。")
+
+    def detail(self, prep_instruction_id: str, prep_instruction_version: int) -> Dict[str, Any]:
+        data = self._client._get_json(
+            PrepInstructionRoutes.DETAIL.format(
+                prep_instruction_id=prep_instruction_id,
+                prep_instruction_version=prep_instruction_version,
+            )
+        )
+        return self._normalize_detail(data)
+
+    def validate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self._client._post_json(PrepInstructionRoutes.VALIDATE, payload)
+        required_keys = ("passed", "errors", "risks")
+        if any(key not in data for key in required_keys):
+            raise BackendError("后端返回的生产准备校验结果结构无效。")
+        return data
+
+    def distribute(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self._client._post_json(PrepInstructionRoutes.DISTRIBUTE, payload)
+        required_keys = ("passed", "errors", "risks", "prep_instruction_id", "prep_instruction_version")
+        if any(key not in data for key in required_keys):
+            raise BackendError("后端返回的生产准备下发结果结构无效。")
+        if "status" not in data:
+            data["status"] = "released"
+        return data
+
+    def _normalize_detail(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        header = data.get("prep_instruction_header")
+        mesh_lines = data.get("mesh_prep_instruction_line")
+        ink_lines = data.get("ink_prep_instruction_line")
+        material_lines = data.get("material_prep_instruction_line")
+        equipment_lines = data.get("equipment_prep_instruction_line")
+
+        if not isinstance(header, dict):
+            raise BackendError("后端返回的生产准备详情结构无效。")
+        if not all(
+            isinstance(value, list)
+            for value in (mesh_lines, ink_lines, material_lines, equipment_lines)
+        ):
+            raise BackendError("后端返回的生产准备详情结构无效。")
+
+        return {
+            "prep_instruction_header": dict(header),
+            "mesh_prep_instruction_line": [item for item in mesh_lines if isinstance(item, dict)],
+            "ink_prep_instruction_line": [item for item in ink_lines if isinstance(item, dict)],
+            "material_prep_instruction_line": [item for item in material_lines if isinstance(item, dict)],
+            "equipment_prep_instruction_line": [item for item in equipment_lines if isinstance(item, dict)],
         }

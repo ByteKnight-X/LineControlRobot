@@ -10,6 +10,7 @@ from PyQt5.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF
 from PyQt5.QtWidgets import QMessageBox
 
 from utilities.backend_client import BackendError
+from utilities.prep_utils import build_constraint_context
 
 
 def _text(value: Any) -> str:
@@ -621,6 +622,10 @@ class ProcessRoutePage(QtWidgets.QWidget):
             return self.txtConstraints.toPlainText()
         if value in (None, ""):
             return "暂无产线约束信息。"
+        if isinstance(value, dict):
+            raw_text = _text(value.get("raw_text")).strip()
+            if raw_text:
+                return raw_text
         if isinstance(value, str):
             return value
         return _render_json(value)
@@ -980,7 +985,11 @@ class ProcessRoutePage(QtWidgets.QWidget):
     def _update_constraints_context(self) -> None:
         if not hasattr(self.controller, "context"):
             return
-        self.controller.context["constraint_context"] = self.txtConstraints.toPlainText().strip()
+        header = self.page_state.get("current_route", {}).get("process_route_header", {})
+        self.controller.context["constraint_context"] = build_constraint_context(
+            header,
+            self.txtConstraints.toPlainText(),
+        )
 
     def _update_validation_summary(self, result: Dict[str, Any]) -> None:
         self.page_state["validation_summary"] = {
