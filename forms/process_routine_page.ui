@@ -299,10 +299,10 @@
                     <property name="topMargin"><number>8</number></property>
                     <property name="rightMargin"><number>10</number></property>
                     <property name="bottomMargin"><number>10</number></property>
-                    <item><widget class="QLabel" name="lblConstraintsTitle"><property name="text"><string>🔐 产线约束</string></property></widget></item>
+                    <item><widget class="QLabel" name="lblPrecautionTitle"><property name="text"><string>🔐 注意事项</string></property></widget></item>
                     <item>
-                      <widget class="QTextEdit" name="txtConstraints">
-                        <property name="placeholderText"><string>描述产线约束（设备能力、换线规则、人员班次、维护窗口等）</string></property>
+                      <widget class="QTextEdit" name="txtPrecaution">
+                        <property name="placeholderText"><string>描述整体步骤</string></property>
                       </widget>
                     </item>
                   </layout>

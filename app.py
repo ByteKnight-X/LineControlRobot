@@ -33,6 +33,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         uic.loadUi(str(Path(__file__).resolve().parent / "forms" / "main_window.ui"), self)
         self.context = {}  # Shared workflow data across pages.
+        self.production_context = self.context
         self.pages = {}
         self.backend = BackendClient()
 

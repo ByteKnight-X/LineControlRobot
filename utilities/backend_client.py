@@ -16,6 +16,7 @@ class ImportRoutes:
     ORDER_IMPORT_LOCAL = "/orders/import_local"
     LOTS_LIST = "/lots/list"
     LOT_DETAIL = "/lots/{lot_id}"
+    LOTS_COMMIT = "/lots/commit"
     LOT_VALIDATE = "/lots/{lot_id}/validate"
     LOTS_IMPORT_LINES = "/lots/import_lines"
     AI_GENERATE_LOTS = "/ai/generate_lots"
@@ -128,6 +129,45 @@ class BackendClient:
         return data
 
 
+def _normalize_issue_messages(value: Any, field_name: str) -> List[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise BackendError(f"后端返回的 {field_name} 结构无效。")
+    messages: List[str] = []
+    for index, item in enumerate(value, start=1):
+        if isinstance(item, dict):
+            field = str(item.get("field") or "").strip()
+            message = str(item.get("message") or "").strip()
+            if not message:
+                raise BackendError(f"后端返回的 {field_name} 结构无效：第 {index} 项缺少 message。")
+            messages.append(f"{field}: {message}" if field else message)
+            continue
+        if isinstance(item, str):
+            text = item.strip()
+            if text:
+                messages.append(text)
+            continue
+        raise BackendError(f"后端返回的 {field_name} 结构无效：第 {index} 项类型错误。")
+    return messages
+
+
+def _normalize_sizes_list(value: Any, field_name: str) -> List[int]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, list):
+        items = value
+    else:
+        raise BackendError(f"后端返回的 {field_name} 结构无效。")
+    normalized: List[int] = []
+    for index, item in enumerate(items, start=1):
+        try:
+            normalized.append(int(item))
+        except (TypeError, ValueError) as exc:
+            raise BackendError(f"后端返回的 {field_name} 结构无效：第 {index} 项不是整数。") from exc
+    return normalized
+
+
 class ImportApi:
     """B0 import-related endpoints: orders, lots, and AI split validation."""
 
@@ -155,6 +195,20 @@ class ImportApi:
     def get_lot(self, lot_id: str) -> Dict[str, Any]:
         return self._client._get_json(ImportRoutes.LOT_DETAIL.format(lot_id=lot_id))
 
+    def commit_lot(self, pending_lot: Dict[str, Any]) -> Dict[str, Any]:
+        data = self._client._post_json(
+            ImportRoutes.LOTS_COMMIT,
+            {"pending_lot": pending_lot},
+        )
+        lot_id = data.get("lot_id")
+        if not lot_id:
+            raise BackendError("提交批次结果结构无效：缺少 lot_id。")
+        if "passed" not in data:
+            raise BackendError("提交批次结果结构无效：缺少 passed。")
+        data["error_info"] = data.get("error_info") if isinstance(data.get("error_info"), list) else []
+        data["risk_info"] = data.get("risk_info") if isinstance(data.get("risk_info"), list) else []
+        return data
+
     def import_lines_to_lot(
         self,
         order_id: str,
@@ -172,19 +226,75 @@ class ImportApi:
     def validate_lot(self, lot_id: str) -> Dict[str, Any]:
         return self._client._post_json(ImportRoutes.LOT_VALIDATE.format(lot_id=lot_id))
 
-    def generate_lots(self, selected_orders: List[str]) -> Dict[str, Any]:
+    def generate_lots(
+        self,
+        selected_orders: List[str],
+        excluded_order_lines: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         data = self._client._post_json(
             ImportRoutes.AI_GENERATE_LOTS,
-            {"selected_orders": selected_orders},
+            {
+                "selected_orders": selected_orders,
+                "excluded_order_lines": excluded_order_lines or [],
+            },
         )
         lots = data.get("lots")
         if not isinstance(lots, list):
             raise BackendError("候选批次单结构无效。")
-        for item in lots:
+        for index, item in enumerate(lots):
             if not isinstance(item, dict):
-                raise BackendError("候选批次单结构无效。")
-            if not isinstance(item.get("lot_header"), dict) or not isinstance(item.get("lot_line"), list):
-                raise BackendError("候选批次单结构无效。")
+                raise BackendError(f"候选批次单结构无效：第 {index + 1} 个候选项不是对象。")
+            header = item.get("lot_header")
+            lines = item.get("lot_line")
+            if not isinstance(header, dict):
+                raise BackendError(f"候选批次单结构无效：第 {index + 1} 个候选项缺少 lot_header。")
+            if not isinstance(lines, list):
+                raise BackendError(f"候选批次单结构无效：候选批次 {header.get('lot_id', index + 1)} 缺少 lot_line 列表。")
+            if not header.get("lot_id"):
+                raise BackendError(f"候选批次单结构无效：第 {index + 1} 个候选项缺少 lot_header.lot_id。")
+            if not header.get("source_order_id"):
+                raise BackendError(
+                    f"候选批次单结构无效：候选批次 {header.get('lot_id', index + 1)} 缺少 lot_header.source_order_id。"
+                )
+            if not header.get("production_line_id"):
+                raise BackendError(
+                    f"候选批次单结构无效：候选批次 {header.get('lot_id')} 缺少 lot_header.production_line_id。"
+                )
+            if "progress" not in header:
+                raise BackendError(
+                    f"候选批次单结构无效：候选批次 {header.get('lot_id')} 缺少 lot_header.progress。"
+                )
+            try:
+                float(header.get("progress"))
+            except (TypeError, ValueError):
+                raise BackendError(
+                    f"候选批次单结构无效：候选批次 {header.get('lot_id')} 的 lot_header.progress 不是数字。"
+                )
+            if not header.get("status"):
+                raise BackendError(
+                    f"候选批次单结构无效：候选批次 {header.get('lot_id')} 缺少 lot_header.status。"
+                )
+            for line_index, line in enumerate(lines, start=1):
+                if not isinstance(line, dict):
+                    raise BackendError(
+                        f"候选批次单结构无效：候选批次 {header.get('lot_id')} 的第 {line_index} 条 lot_line 不是对象。"
+                    )
+                required_fields = (
+                    "lot_id",
+                    "lot_line_id",
+                    "source_order_id",
+                    "source_order_line_id",
+                    "sku",
+                    "color",
+                    "size",
+                    "quantity_planned",
+                    "status",
+                )
+                for field in required_fields:
+                    if line.get(field) in (None, ""):
+                        raise BackendError(
+                            f"候选批次单结构无效：候选批次 {header.get('lot_id')} 的第 {line_index} 条 lot_line 缺少 {field}。"
+                        )
         return data
 
     def validate_lots(self, pending_lots: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -195,9 +305,22 @@ class ImportApi:
         results = data.get("validation_results")
         if not isinstance(results, list):
             raise BackendError("候选批次单校验结果结构无效。")
-        for item in results:
+        normalized_results: List[Dict[str, Any]] = []
+        for index, item in enumerate(results):
             if not isinstance(item, dict):
-                raise BackendError("候选批次单校验结果结构无效。")
+                raise BackendError(f"候选批次单校验结果结构无效：第 {index + 1} 个结果不是对象。")
+            lot_id = item.get("lot_id")
+            if not lot_id:
+                raise BackendError(f"候选批次单校验结果结构无效：第 {index + 1} 个结果缺少 lot_id。")
+            if "passed" not in item:
+                raise BackendError(f"候选批次单校验结果结构无效：批次 {lot_id} 缺少 passed。")
+            normalized_item = dict(item)
+            errors = normalized_item.get("errors")
+            risk_info = normalized_item.get("risk_info")
+            normalized_item["errors"] = errors if isinstance(errors, list) else []
+            normalized_item["risk_info"] = risk_info if isinstance(risk_info, list) else []
+            normalized_results.append(normalized_item)
+        data["validation_results"] = normalized_results
         return data
 
 
@@ -228,7 +351,14 @@ class ProcessPlanApi:
         process_plans = data.get("process_plans")
         if not isinstance(process_plans, list):
             raise BackendError("后端返回的历史方案列表结构无效。")
-        return [item for item in process_plans if isinstance(item, dict)]
+        normalized: List[Dict[str, Any]] = []
+        for index, item in enumerate(process_plans, start=1):
+            if not isinstance(item, dict):
+                raise BackendError(f"后端返回的历史方案列表结构无效：第 {index} 项不是对象。")
+            normalized_item = dict(item)
+            normalized_item["sizes"] = _normalize_sizes_list(normalized_item.get("sizes"), "process_plans[].sizes")
+            normalized.append(normalized_item)
+        return normalized
 
     def detail(self, process_plan_id: str, process_plan_version: int) -> Dict[str, Any]:
         data = self._client._get_json(
@@ -241,13 +371,24 @@ class ProcessPlanApi:
             data.get("process_plan_line"), list
         ):
             raise BackendError("后端返回的方案详情结构无效。")
+        header = dict(data["process_plan_header"])
+        header["sizes"] = _normalize_sizes_list(header.get("sizes"), "process_plan_header.sizes")
+        lines: List[Dict[str, Any]] = []
+        for index, item in enumerate(data["process_plan_line"], start=1):
+            if not isinstance(item, dict):
+                raise BackendError(f"后端返回的方案详情结构无效：第 {index} 条方案行不是对象。")
+            lines.append(dict(item))
+        data["process_plan_header"] = header
+        data["process_plan_line"] = lines
         return data
 
     def validate(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         data = self._client._post_json(ProcessPlanRoutes.VALIDATE, payload)
-        required_keys = ("passed", "errors", "risks")
+        required_keys = ("passed", "errors", "risks", "status")
         if any(key not in data for key in required_keys):
             raise BackendError("后端返回的校验结果结构无效。")
+        data["errors"] = _normalize_issue_messages(data.get("errors"), "errors")
+        data["risks"] = _normalize_issue_messages(data.get("risks"), "risks")
         return data
 
     def approve(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -255,6 +396,8 @@ class ProcessPlanApi:
         required_keys = ("approved", "process_plan_id", "process_plan_version", "status", "errors", "risks")
         if any(key not in data for key in required_keys):
             raise BackendError("后端返回的批准结果结构无效。")
+        data["errors"] = _normalize_issue_messages(data.get("errors"), "errors")
+        data["risks"] = _normalize_issue_messages(data.get("risks"), "risks")
         return data
 
 

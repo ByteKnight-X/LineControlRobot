@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import base64
+import io
+import re
+import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -9,9 +14,40 @@ from PyQt5.QtWidgets import QMessageBox
 from utilities.backend_client import BackendError
 
 try:
-    from PyQt5.QtSvg import QGraphicsSvgItem
+    from PyQt5.QtWebEngineWidgets import QWebEngineView
 except ImportError:  # pragma: no cover
-    QGraphicsSvgItem = None
+    QWebEngineView = None
+
+
+class PreviewWebEngineView(QWebEngineView):
+    """QWebEngineView with ctrl+wheel zoom support for SVG preview."""
+
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._default_zoom_factor = 1.0
+        self._zoom_step = 0.1
+        self._min_zoom_factor = 0.3
+        self._max_zoom_factor = 3.0
+        self.setZoomFactor(self._default_zoom_factor)
+
+    def reset_zoom(self) -> None:
+        self.setZoomFactor(self._default_zoom_factor)
+
+    def _apply_zoom_delta(self, direction: int) -> None:
+        next_zoom = self.zoomFactor() + (self._zoom_step * direction)
+        next_zoom = max(self._min_zoom_factor, min(self._max_zoom_factor, next_zoom))
+        self.setZoomFactor(next_zoom)
+
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+        if event.modifiers() & QtCore.Qt.ControlModifier:
+            delta_y = event.angleDelta().y()
+            if delta_y > 0:
+                self._apply_zoom_delta(1)
+            elif delta_y < 0:
+                self._apply_zoom_delta(-1)
+            event.accept()
+            return
+        super().wheelEvent(event)
 
 
 def _text(value: Any) -> str:
@@ -23,6 +59,249 @@ def _message_lines(value: Any) -> List[str]:
         return [_text(item).strip() for item in value if _text(item).strip()]
     message = _text(value).strip()
     return [message] if message else []
+
+
+def _normalize_sizes(value: Any) -> List[int]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, list):
+        items = value
+    else:
+        items = [part.strip() for part in _text(value).split(",") if part.strip()]
+    sizes: List[int] = []
+    for item in items:
+        try:
+            sizes.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return sizes
+
+
+def _sizes_to_display(value: Any) -> str:
+    sizes = _normalize_sizes(value)
+    if not sizes:
+        return ""
+    unique_sizes = sorted(set(sizes))
+    if len(unique_sizes) == 1:
+        return str(unique_sizes[0])
+    return ",".join(str(item) for item in unique_sizes)
+
+
+def _looks_like_svg_content(value: str) -> bool:
+    text = value.strip()
+    if not text:
+        return False
+    lowered = text.lower()
+    return (
+        (lowered.startswith("<?xml") and "<svg" in lowered)
+        or lowered.startswith("<svg")
+        or ("<svg" in lowered and "</svg>" in lowered)
+    )
+
+
+def _normalize_svg_markup(svg_text: str) -> str:
+    text = _strip_svg_prolog(svg_text)
+    match = re.search(r"(<svg\b.*?</svg>)", text, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+    return match.group(1).strip()
+
+
+def _strip_svg_prolog(svg_text: str) -> str:
+    text = svg_text.strip()
+    if not text:
+        return ""
+    text = re.sub(r"^\s*<\?xml[^>]*\?>\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^\s*<!--.*?-->\s*", "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"^\s*<!DOCTYPE[^>]*>\s*", "", text, flags=re.IGNORECASE)
+    return text.strip()
+
+
+def _normalize_svg_references(svg_text: str) -> str:
+    tag_pattern = re.compile(
+        r"<(?P<tag>[A-Za-z_][\w:.-]*)(?P<attrs>[^<>]*?(?:xlink:href|(?<!xlink:)href)[^<>]*?)(?P<close>\s*/?)>",
+        flags=re.IGNORECASE,
+    )
+
+    def _normalize_tag(match: re.Match[str]) -> str:
+        tag = match.group("tag")
+        attrs = match.group("attrs") or ""
+        close = match.group("close") or ""
+        xlink_match = re.search(
+            r'xlink:href\s*=\s*(?P<quote>["\'])(?P<value>[^"\']+)(?P=quote)',
+            attrs,
+            flags=re.IGNORECASE,
+        )
+        href_match = re.search(
+            r'(?<![\w:-])href\s*=\s*(?P<quote>["\'])(?P<value>[^"\']+)(?P=quote)',
+            attrs,
+            flags=re.IGNORECASE,
+        )
+        if xlink_match and href_match:
+            return match.group(0)
+        if xlink_match and xlink_match.group("value").startswith("#"):
+            quote = xlink_match.group("quote")
+            value = xlink_match.group("value")
+            attrs = f"{attrs} href={quote}{value}{quote}"
+        elif href_match and href_match.group("value").startswith("#"):
+            quote = href_match.group("quote")
+            value = href_match.group("value")
+            attrs = f"{attrs} xlink:href={quote}{value}{quote}"
+        return f"<{tag}{attrs}{close}>"
+
+    return tag_pattern.sub(_normalize_tag, svg_text)
+
+
+def _prefix_svg_ids(svg_text: str, unique_prefix: str) -> str:
+    id_pattern = re.compile(r'\bid=(["\'])([^"\']+)\1', flags=re.IGNORECASE)
+    id_map: Dict[str, str] = {}
+
+    def _replace_id(match: re.Match[str]) -> str:
+        original_id = match.group(2)
+        prefixed_id = id_map.setdefault(original_id, f"{unique_prefix}{original_id}")
+        return f'id="{prefixed_id}"'
+
+    text = id_pattern.sub(_replace_id, svg_text)
+    if not id_map:
+        return text
+
+    for original_id, prefixed_id in sorted(id_map.items(), key=lambda item: len(item[0]), reverse=True):
+        escaped_id = re.escape(original_id)
+        text = re.sub(rf'url\(\s*#{escaped_id}\s*\)', f"url(#{prefixed_id})", text)
+        text = re.sub(
+            rf'((?:xlink:href|href)\s*=\s*["\'])#{escaped_id}(["\'])',
+            rf"\1#{prefixed_id}\2",
+            text,
+            flags=re.IGNORECASE,
+        )
+    return text
+
+
+def preprocess_svg(svg_text: str, unique_prefix: str) -> str:
+    normalized_svg = _normalize_svg_markup(svg_text)
+    if not normalized_svg:
+        return ""
+    normalized_svg = _normalize_svg_references(normalized_svg)
+    return _prefix_svg_ids(normalized_svg, unique_prefix)
+
+
+def _validate_svg_xml(svg_text: str) -> str | None:
+    try:
+        ET.fromstring(svg_text)
+    except ET.ParseError as exc:
+        return str(exc)
+    return None
+
+
+def _load_ui_with_webengine_support(ui_path: Path, instance: QtWidgets.QWidget) -> None:
+    ui_text = ui_path.read_text(encoding="utf-8")
+    if 'class="QWebEngineView"' in ui_text and "<customwidgets>" not in ui_text:
+        injection = """
+  <customwidgets>
+    <customwidget>
+      <class>PreviewWebEngineView</class>
+      <extends>QWebEngineView</extends>
+      <header>separation_page</header>
+    </customwidget>
+  </customwidgets>
+"""
+        ui_text = ui_text.replace('class="QWebEngineView"', 'class="PreviewWebEngineView"', 1)
+        ui_text = ui_text.replace("  <resources/>\n  <connections/>", f"{injection}  <resources/>\n  <connections/>")
+        uic.loadUi(io.StringIO(ui_text), instance)
+        return
+    uic.loadUi(str(ui_path), instance)
+
+
+def _svg_to_data_url(svg_text: str) -> str:
+    encoded_svg = base64.b64encode(svg_text.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded_svg}"
+
+
+def _build_svg_html(image_src: str) -> str:
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body {{
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #fafafa;
+    }}
+    body {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
+    .svg-host {{
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #fafafa;
+    }}
+    .svg-host img {{
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      display: block;
+    }}
+  </style>
+</head>
+<body>
+  <div class="svg-host">
+    <img class="svg-image" src="{image_src}" alt="SVG preview" />
+  </div>
+</body>
+</html>
+"""
+
+
+def _build_preview_message_html(message: str) -> str:
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body {{
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #fafafa;
+      font-family: sans-serif;
+    }}
+    body {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
+    .message-card {{
+      max-width: 80%;
+      padding: 16px 20px;
+      color: #595959;
+      font-size: 13px;
+      line-height: 1.6;
+      text-align: center;
+      background: #ffffff;
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    }}
+  </style>
+</head>
+<body>
+  <div class="message-card">{message}</div>
+</body>
+</html>
+"""
 
 
 def _to_number(value: Any) -> Any:
@@ -127,7 +406,7 @@ class ProcessPlanPickerDialog(QtWidgets.QDialog):
                 _text(plan.get("process_plan_id")),
                 _text(plan.get("process_plan_version")),
                 _text(plan.get("sku")),
-                _text(plan.get("size")),
+                _sizes_to_display(plan.get("sizes")),
                 _text(plan.get("color")),
                 _text(plan.get("validated_by")),
                 _text(plan.get("status")),
@@ -155,6 +434,8 @@ class ProcessPlanPickerDialog(QtWidgets.QDialog):
             return
         selected = self._process_plans[rows[0].row()]
         self._page_state["library_dialog"]["selected_process_plan_id"] = selected.get("process_plan_id") or True
+        self._page_state["focus"]["selected_process_plan_id"] = selected.get("process_plan_id")
+        self._page_state["focus"]["selected_process_plan_version"] = selected.get("process_plan_version")
 
     def _accept_selection(self) -> None:
         rows = self.table.selectionModel().selectedRows()
@@ -173,18 +454,32 @@ class SeparationPage(QtWidgets.QWidget):
 
     def __init__(self, controller: Any):
         super().__init__()
+        if QWebEngineView is None:
+            raise RuntimeError("当前环境缺少 PyQtWebEngine，工艺设计页无法渲染 SVG 预览。")
         ui_path = Path(__file__).resolve().parent / "forms" / "separation_page.ui"
-        uic.loadUi(str(ui_path), self)
+        _load_ui_with_webengine_support(ui_path, self)
         self.controller = controller
         self.page_state: Dict[str, Any] = {
             "page_status": "draft",
             "loading": False,
             "dirty": False,
+            "db_process_plan": [],
             "current_plan": {
                 "process_plan_header": {},
                 "process_plan_line": [],
             },
+            "current_process_plan": {
+                "process_plan_header": {},
+                "process_plan_line": [],
+            },
             "active_mesh_index": 0,
+            "focus": {
+                "selected_process_plan_id": None,
+                "selected_process_plan_version": None,
+            },
+            "dialogs": {
+                "library_open": False,
+            },
             "validation_summary": {
                 "passed": False,
                 "errors": [],
@@ -203,9 +498,17 @@ class SeparationPage(QtWidgets.QWidget):
         self.refresh_data()
 
     def _setup_widgets(self) -> None:
-        self.graphicsPreview.setScene(QtWidgets.QGraphicsScene(self))
-        self.graphicsPreview.setRenderHint(QtGui.QPainter.Antialiasing, True)
-        self.graphicsPreview.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)
+        self.graphicsPreview.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
+        try:
+            self.graphicsPreview.page().setBackgroundColor(QtGui.QColor("#fafafa"))
+        except Exception:
+            pass
+        if isinstance(self.graphicsPreview, PreviewWebEngineView):
+            self.graphicsPreview.reset_zoom()
+        self.canvasLayout.setStretch(0, 0)
+        self.canvasLayout.setStretch(1, 1)
+        self.canvasLayout.setStretch(2, 0)
+        self.graphicsPreview.setVisible(True)
         self.txtSOPSteps.setReadOnly(False)
         self.txtValidationInfo.setReadOnly(True)
 
@@ -258,6 +561,20 @@ class SeparationPage(QtWidgets.QWidget):
             "process_plan_header": dict(header) if isinstance(header, dict) else {},
             "process_plan_line": [dict(item) for item in lines if isinstance(item, dict)],
         }
+        self.page_state["current_process_plan"] = self.page_state["current_plan"]
+        status = _text(self.page_state["current_plan"]["process_plan_header"].get("status")).strip().lower()
+        self.page_state["page_status"] = "Frozen" if status in {"validated", "frozen"} else "draft"
+        self.page_state["dirty"] = False
+        self.page_state["validation_summary"] = {
+            "passed": False,
+            "errors": [],
+            "risks": [],
+        }
+        self.page_state["active_mesh_index"] = 0
+        header_data = self.page_state["current_plan"]["process_plan_header"]
+        self.page_state["focus"]["selected_process_plan_id"] = header_data.get("process_plan_id")
+        self.page_state["focus"]["selected_process_plan_version"] = header_data.get("process_plan_version")
+        self._render_page()
         self.page_state["active_mesh_index"] = 0
         self._render_page()
 
@@ -284,16 +601,15 @@ class SeparationPage(QtWidgets.QWidget):
             header["process_plan_id"] = lot_header.get("lot_id") or lot_header.get("id")
             header["status"] = lot_header.get("status")
         if isinstance(order_header, dict):
-            header["process_plan_version"] = order_header.get("version")
             header["sku"] = order_header.get("sku")
 
         valid_lines = [item for item in order_lines if isinstance(item, dict)] if isinstance(order_lines, list) else []
         if valid_lines:
             header["sku"] = header.get("sku") or valid_lines[0].get("sku")
-            header["colorway"] = valid_lines[0].get("color")
-            sizes = [str(item.get("size")) for item in valid_lines if item.get("size") not in (None, "")]
+            header["color"] = valid_lines[0].get("color")
+            sizes = [item.get("size") for item in valid_lines if item.get("size") not in (None, "")]
             if sizes:
-                header["code_range"] = sizes[0] if len(set(sizes)) == 1 else f"{min(sizes)}-{max(sizes)}"
+                header["sizes"] = _normalize_sizes(sizes)
         return {key: value for key, value in header.items() if value not in (None, "")}
 
     def _build_lines_from_context(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -340,8 +656,8 @@ class SeparationPage(QtWidgets.QWidget):
         self.txtPlanId.setText(_text(header.get("process_plan_id")))
         self.txtPlanVer.setText(_text(header.get("process_plan_version")))
         self.txtSku.setText(_text(header.get("sku")))
-        self.txtCodeRange.setText(_text(header.get("code_range") or header.get("size")))
-        self.txtColorway.setText(_text(header.get("colorway") or header.get("color")))
+        self.txtCodeRange.setText(_sizes_to_display(header.get("sizes")))
+        self.txtColorway.setText(_text(header.get("color")))
         self.txtApprover.setText(_text(header.get("validated_by")))
         self.txtStatus.setText(_text(header.get("status") or self.page_state["page_status"]))
 
@@ -375,67 +691,37 @@ class SeparationPage(QtWidgets.QWidget):
         self.txtValidationInfo.setPlainText("\n".join(lines))
 
     def _render_preview(self) -> None:
-        scene = QtWidgets.QGraphicsScene(self)
         line = self._active_line()
-        raw_path = _text(line.get("pattern_design")).strip()
-        candidate = self._resolve_preview_path(raw_path)
+        svg_text = _text(line.get("pattern_design")).strip()
+        base_url = QtCore.QUrl.fromLocalFile(str(Path(__file__).resolve().parent) + "/")
+        if isinstance(self.graphicsPreview, PreviewWebEngineView):
+            self.graphicsPreview.reset_zoom()
 
-        if not raw_path:
-            text_item = scene.addText("当前网版未提供 pattern_design。")
-            text_item.setDefaultTextColor(QtGui.QColor("#595959"))
-            text_item.setPos(12, 12)
-            self.graphicsPreview.setScene(scene)
+        if not svg_text:
+            self.graphicsPreview.setHtml(_build_preview_message_html("当前网版未提供 SVG 内容。"), base_url)
             return
 
-        if candidate is None or not candidate.exists():
-            text_item = scene.addText(f"图案文件不存在：{Path(raw_path).name}")
-            text_item.setDefaultTextColor(QtGui.QColor("#595959"))
-            text_item.setPos(12, 12)
-            self.graphicsPreview.setScene(scene)
+        svg_prefix = f"svg_preview_{int(time.time() * 1000)}_{self.page_state['active_mesh_index']}_"
+        processed_svg = preprocess_svg(svg_text, svg_prefix)
+        if not processed_svg:
+            self.graphicsPreview.setHtml(
+                _build_preview_message_html("SVG 结构无效，缺少可渲染的 &lt;svg&gt; 根节点。"),
+                base_url,
+            )
+            return
+        xml_error = _validate_svg_xml(processed_svg)
+        if xml_error:
+            self.graphicsPreview.setHtml(
+                _build_preview_message_html(f"SVG 结构无效，预处理后 XML 不合法。<br/>{xml_error}"),
+                base_url,
+            )
             return
 
-        pixmap = QtGui.QPixmap(str(candidate))
-        if not pixmap.isNull():
-            scene.addPixmap(pixmap)
-            self.graphicsPreview.setScene(scene)
-            self._fit_preview(scene)
-            return
-
-        if candidate.suffix.lower() == ".svg" and QGraphicsSvgItem is not None:
-            scene.addItem(QGraphicsSvgItem(str(candidate)))
-            self.graphicsPreview.setScene(scene)
-            self._fit_preview(scene)
-            return
-
-        text_item = scene.addText(f"无法预览文件：{candidate.name}")
-        text_item.setDefaultTextColor(QtGui.QColor("#595959"))
-        text_item.setPos(12, 12)
-        self.graphicsPreview.setScene(scene)
-
-    def _resolve_preview_path(self, raw_path: str) -> Path | None:
-        if not raw_path:
-            return None
-        normalized = raw_path.strip().strip('"').replace("\\", "/")
-        project_root = Path(__file__).resolve().parent
-        basename = Path(normalized).name
-        candidates = [
-            Path(normalized),
-            project_root / normalized,
-            project_root / "resource" / "layers" / basename,
-            project_root / "Resource" / "layers" / basename,
-            project_root / "resource" / basename,
-            project_root / "Resource" / basename,
-        ]
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate.resolve()
-        return None
-
-    def _fit_preview(self, scene: QtWidgets.QGraphicsScene) -> None:
-        rect = scene.itemsBoundingRect()
-        if rect.isNull():
-            return
-        QtCore.QTimer.singleShot(0, lambda: self.graphicsPreview.fitInView(rect, QtCore.Qt.KeepAspectRatio))
+        image_src = _svg_to_data_url(processed_svg)
+        self.graphicsPreview.setHtml(
+            _build_svg_html(image_src),
+            base_url,
+        )
 
     def _set_combo_text(self, combo: QtWidgets.QComboBox, value: Any) -> None:
         text = _text(value).strip()
@@ -551,10 +837,17 @@ class SeparationPage(QtWidgets.QWidget):
             "process_plan_header": dict(header) if isinstance(header, dict) else {},
             "process_plan_line": [dict(item) for item in lines if isinstance(item, dict)] if isinstance(lines, list) else [],
         }
+        self.page_state["current_process_plan"] = self.page_state["current_plan"]
         status = _text(self.page_state["current_plan"]["process_plan_header"].get("status")).strip().lower()
-        self.page_state["page_status"] = "Frozen" if status == "frozen" else "draft"
+        self.page_state["page_status"] = "Frozen" if status in {"frozen", "validated"} else "draft"
         self.page_state["dirty"] = False
         self.page_state["active_mesh_index"] = 0
+        self.page_state["focus"]["selected_process_plan_id"] = self.page_state["current_plan"]["process_plan_header"].get(
+            "process_plan_id"
+        )
+        self.page_state["focus"]["selected_process_plan_version"] = self.page_state["current_plan"][
+            "process_plan_header"
+        ].get("process_plan_version")
         self.page_state["validation_summary"] = {
             "passed": False,
             "errors": [],
@@ -574,16 +867,33 @@ class SeparationPage(QtWidgets.QWidget):
     def _build_payload(self) -> Dict[str, Any]:
         self._collect_current_mesh_from_widgets()
         header = dict(self.page_state["current_plan"]["process_plan_header"])
-        header["size"] = header.get("size") or header.get("code_range")
-        header["color"] = header.get("color") or header.get("colorway")
+        header_payload = {
+            "sku": header.get("sku"),
+            "sizes": _normalize_sizes(header.get("sizes")),
+            "color": header.get("color"),
+            "validated_by": header.get("validated_by"),
+        }
         lines: List[Dict[str, Any]] = []
         for item in self.page_state["current_plan"]["process_plan_line"]:
-            line = dict(item)
+            line = {
+                "mesh_index": item.get("mesh_index"),
+                "sizes": item.get("sizes") or _sizes_to_display(header_payload["sizes"]),
+                "pattern_design": item.get("pattern_design"),
+                "material": item.get("material"),
+                "mesh_model": item.get("mesh_model"),
+                "diameter": item.get("diameter"),
+                "stretching": item.get("stretching"),
+                "stretching_degree": item.get("stretching_degree"),
+                "tpi": item.get("tpi"),
+                "tension": item.get("tension"),
+                "frame_specification": item.get("frame_specification"),
+                "operation": item.get("operation"),
+            }
             for key in ("mesh_index", "diameter", "stretching_degree", "tpi", "tension"):
                 line[key] = _to_number(line.get(key))
             lines.append(line)
         return {
-            "process_plan_header": header,
+            "process_plan_header": header_payload,
             "process_plan_line": lines,
         }
 
@@ -614,31 +924,37 @@ class SeparationPage(QtWidgets.QWidget):
 
     def _on_import_scheme(self) -> None:
         self.page_state["library_dialog"]["open"] = True
+        self.page_state["dialogs"]["library_open"] = True
         self.page_state["library_dialog"]["selected_process_plan_id"] = False
         self._set_loading(True)
         try:
             process_plans = self.controller.backend.process_plans.list()
         except BackendError as exc:
             self.page_state["library_dialog"]["open"] = False
+            self.page_state["dialogs"]["library_open"] = False
             self._set_loading(False)
             QMessageBox.critical(self, "版本库", f"版本库加载失败：{exc}")
             return
         self._set_loading(False)
+        self.page_state["db_process_plan"] = [dict(item) for item in process_plans]
 
         if not process_plans:
             self.page_state["library_dialog"]["open"] = False
+            self.page_state["dialogs"]["library_open"] = False
             QMessageBox.information(self, "版本库", "版本库为空，暂无历史方案。")
             return
 
         dialog = ProcessPlanPickerDialog(process_plans, self.page_state, self)
         if dialog.exec_() != QtWidgets.QDialog.Accepted:
             self.page_state["library_dialog"]["open"] = False
+            self.page_state["dialogs"]["library_open"] = False
             self.page_state["library_dialog"]["selected_process_plan_id"] = False
             return
 
         selected = dialog.selected_plan()
         if not selected:
             self.page_state["library_dialog"]["open"] = False
+            self.page_state["dialogs"]["library_open"] = False
             return
 
         process_plan_id = _text(selected.get("process_plan_id")).strip()
@@ -646,6 +962,7 @@ class SeparationPage(QtWidgets.QWidget):
             process_plan_version = int(float(selected.get("process_plan_version")))
         except (TypeError, ValueError):
             self.page_state["library_dialog"]["open"] = False
+            self.page_state["dialogs"]["library_open"] = False
             QMessageBox.warning(self, "版本库", "历史方案版本号无效。")
             return
 
@@ -654,11 +971,13 @@ class SeparationPage(QtWidgets.QWidget):
             detail = self.controller.backend.process_plans.detail(process_plan_id, process_plan_version)
         except BackendError as exc:
             self.page_state["library_dialog"]["open"] = False
+            self.page_state["dialogs"]["library_open"] = False
             self._set_loading(False)
             QMessageBox.critical(self, "版本库", f"版本详情加载失败：{exc}")
             return
         self._set_loading(False)
         self.page_state["library_dialog"]["open"] = False
+        self.page_state["dialogs"]["library_open"] = False
         self._load_process_plan(detail)
         self._sync_process_plan_context()
 
