@@ -304,13 +304,101 @@
                     </item>
 
                     <item>
-                      <widget class="QTextEdit" name="txtInstructionContent">
-                        <property name="plainText"><string>【设备准备指令】丝印机#2
-
-1) 点检：急停/气压/刮刀/治具定位；确认上次清洁记录。
-2) 程序：SOP-PRINT-8R80；参数：刮印 2 次；速度 120。
-3) 风险处置：丝印机#2 维护中 → 建议切换丝印机#3 或调整排产。
-4) 下发前回读：程序号/关键参数/版本号；记录操作人+时间戳。</string></property>
+                      <widget class="QStackedWidget" name="instructionStack">
+                        <property name="currentIndex"><number>0</number></property>
+                        <widget class="QWidget" name="pageGenericInstruction">
+                          <layout class="QVBoxLayout" name="genericInstructionLayout">
+                            <property name="leftMargin"><number>0</number></property>
+                            <property name="topMargin"><number>0</number></property>
+                            <property name="rightMargin"><number>0</number></property>
+                            <property name="bottomMargin"><number>0</number></property>
+                            <property name="spacing"><number>8</number></property>
+                            <item>
+                              <widget class="QFrame" name="genericParamCard">
+                                <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+                                <layout class="QVBoxLayout" name="genericParamLayout">
+                                  <property name="leftMargin"><number>10</number></property>
+                                  <property name="topMargin"><number>10</number></property>
+                                  <property name="rightMargin"><number>10</number></property>
+                                  <property name="bottomMargin"><number>10</number></property>
+                                  <property name="spacing"><number>8</number></property>
+                                  <item><widget class="QLabel" name="lblGenericParamTitle"><property name="text"><string>参数栏</string></property></widget></item>
+                                  <item>
+                                    <widget class="QTableWidget" name="tableGenericParams">
+                                      <property name="columnCount"><number>2</number></property>
+                                      <column>
+                                        <property name="text"><string>参数名称</string></property>
+                                      </column>
+                                      <column>
+                                        <property name="text"><string>参数值</string></property>
+                                      </column>
+                                    </widget>
+                                  </item>
+                                </layout>
+                              </widget>
+                            </item>
+                          </layout>
+                        </widget>
+                        <widget class="QWidget" name="pageMeshInstruction">
+                          <layout class="QVBoxLayout" name="meshInstructionLayout">
+                            <property name="leftMargin"><number>0</number></property>
+                            <property name="topMargin"><number>0</number></property>
+                            <property name="rightMargin"><number>0</number></property>
+                            <property name="bottomMargin"><number>0</number></property>
+                            <property name="spacing"><number>8</number></property>
+                            <item>
+                              <widget class="QSplitter" name="meshInstructionSplitter">
+                                <property name="orientation"><enum>Qt::Vertical</enum></property>
+                                <property name="childrenCollapsible"><bool>false</bool></property>
+                                <property name="handleWidth"><number>10</number></property>
+                                <widget class="QFrame" name="meshPreviewCard">
+                                  <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+                                  <layout class="QVBoxLayout" name="meshPreviewLayout">
+                                    <property name="leftMargin"><number>10</number></property>
+                                    <property name="topMargin"><number>10</number></property>
+                                    <property name="rightMargin"><number>10</number></property>
+                                    <property name="bottomMargin"><number>10</number></property>
+                                    <property name="spacing"><number>8</number></property>
+                                    <item><widget class="QLabel" name="lblMeshPreviewTitle"><property name="text"><string>网版图案设计</string></property></widget></item>
+                                    <item>
+                                      <widget class="QFrame" name="meshPreviewHost">
+                                        <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+                                        <layout class="QVBoxLayout" name="meshPreviewHostLayout">
+                                          <property name="leftMargin"><number>0</number></property>
+                                          <property name="topMargin"><number>0</number></property>
+                                          <property name="rightMargin"><number>0</number></property>
+                                          <property name="bottomMargin"><number>0</number></property>
+                                        </layout>
+                                      </widget>
+                                    </item>
+                                  </layout>
+                                </widget>
+                                <widget class="QFrame" name="meshParamCard">
+                                  <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+                                  <layout class="QVBoxLayout" name="meshParamLayout">
+                                    <property name="leftMargin"><number>10</number></property>
+                                    <property name="topMargin"><number>10</number></property>
+                                    <property name="rightMargin"><number>10</number></property>
+                                    <property name="bottomMargin"><number>10</number></property>
+                                    <property name="spacing"><number>8</number></property>
+                                    <item><widget class="QLabel" name="lblMeshParamTitle"><property name="text"><string>参数栏</string></property></widget></item>
+                                    <item>
+                                      <widget class="QTableWidget" name="tableMeshParams">
+                                        <property name="columnCount"><number>2</number></property>
+                                        <column>
+                                          <property name="text"><string>参数名称</string></property>
+                                        </column>
+                                        <column>
+                                          <property name="text"><string>参数值</string></property>
+                                        </column>
+                                      </widget>
+                                    </item>
+                                  </layout>
+                                </widget>
+                              </widget>
+                            </item>
+                          </layout>
+                        </widget>
                       </widget>
                     </item>
                   </layout>

@@ -66,14 +66,15 @@ def _short_json(value: Any, limit: int = 64) -> str:
 
 ROUTE_PRECAUTION_TEXT = """
 1. 首检测信息
-   -注意对准鞋头中心点及后跟部位变现；后跟要对接不可有高低
-   -打底与上色均不可榨浆、溢色、麻面和沙眼等问题
-   -油墨上色时注意看色卡
-   -油墨烤干后效果不可薄于色卡
+    -鞋头中心点、后跟结尾、变现对位是否准确，不得出现高低跟、错位
+    -不得有漏印、重影、溢色、沙眼、麻面、脏污、刮伤
+    -颜色与色卡一致，厚度/立体效果达标，确认通过后才能连续生产
 2. 环境控制
    -车间温度控制在 22-26℃，避免过高或过低导致油墨胶浆异常；湿度不可高于75%RH，避免静电吸盘异常
 3. 异常处置
-   -连续出现5双出现异常（榨浆、溢色、麻面、沙眼和色差）立即停机。
+   -连续出现5件异常时，立即停机排查故障
+   -先排查网版、刮刀角度 / 速度、压缩量、间距和烘干参数，再做调整
+   -调整完成后必须再做首检确认
 """
 
 
@@ -528,7 +529,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
                 label_item.setFlags(label_item.flags() & ~Qt.ItemIsEditable)
 
     def _build_loader_tabs(self) -> None:
-        arm_page = self._create_tab_page("机械臂参数")
+        arm_page = self._create_tab_page("机械臂\n参数")
         arm_layout = arm_page.layout()
         arm_table = self._create_table(["参数项", "参数值"], "loader_arm")
         self._fill_key_value_table(
@@ -537,7 +538,7 @@ class NodeEditorDialog(QtWidgets.QDialog):
         )
         arm_layout.addWidget(arm_table)
 
-        target_page = self._create_tab_page("目标位置")
+        target_page = self._create_tab_page("目标\n位置")
         target_layout = target_page.layout()
         target_table = self._create_table(["序号", "X", "Y", "Z", "R"], "loader_targets")
         target_positions = self._params.get("target_positions") or []
@@ -953,7 +954,7 @@ class ProcessRoutePage(QtWidgets.QWidget):
     NODE_H = 120
     NODE_GAP_X = 56
     NODE_GAP_Y = 112
-    MAX_NODES_PER_ROW = 10
+    MAX_NODES_PER_ROW = 9
     START_X = 64
     BASE_Y = 184
     LOOP_LANE_HEIGHT = 84
@@ -1074,13 +1075,19 @@ class ProcessRoutePage(QtWidgets.QWidget):
 
     def refresh_data(self) -> None:
         context = getattr(self.controller, "context", {}) or {}
+        load_message = _text(context.get("process_route_load_message")).strip()
+        if load_message and hasattr(self.controller, "context"):
+            self.controller.context["process_route_load_message"] = ""
+            if hasattr(self.controller, "production_context"):
+                self.controller.production_context["process_route_load_message"] = ""
         route_context = context.get("process_route_context")
         if not isinstance(route_context, dict):
             route_context = {}
 
         current_route = self._normalize_route_context(route_context)
         if not any(current_route.values()):
-            self._set_empty_state()
+            validation_message = load_message or "未加载工艺路线方案。"
+            self._set_empty_state(validation_message=validation_message)
             return
 
         self.page_state["current_route"] = current_route
@@ -1088,8 +1095,10 @@ class ProcessRoutePage(QtWidgets.QWidget):
         self.page_state["page_status"] = status or "created"
         self.page_state["dirty"] = False
         self._render_page()
+        if load_message:
+            self.txtValidationInfo.setPlainText(load_message)
 
-    def _set_empty_state(self) -> None:
+    def _set_empty_state(self, validation_message: str = "未加载工艺路线方案。") -> None:
         self.page_state["current_route"] = {
             "process_route_header": {},
             "process_route_loop_line": [],
@@ -1098,7 +1107,7 @@ class ProcessRoutePage(QtWidgets.QWidget):
         self.page_state["page_status"] = "created"
         self.page_state["dirty"] = False
         self.page_state["validation_summary"] = {"passed": False, "errors": [], "risks": []}
-        self._render_page(empty_message="暂无工艺路线数据", validation_message="未加载工艺路线方案。")
+        self._render_page(empty_message="暂无工艺路线数据", validation_message=validation_message)
 
     def _normalize_route_context(self, route_context: Dict[str, Any]) -> Dict[str, Any]:
         header = route_context.get("process_route_header")
@@ -1997,12 +2006,9 @@ class ProcessRoutePage(QtWidgets.QWidget):
         self._approve_and_refresh(show_message=True)
 
     def _on_next(self) -> None:
-        if self.page_state["page_status"] != "validated":
-            QMessageBox.warning(self, "下一步", "当前工艺路线未通过校验，无法进入下一步。")
-            return
-
-        if not self._approve_and_refresh(show_message=False):
-            return
+        if self.page_state["page_status"] == "validated":
+            if not self._approve_and_refresh(show_message=False):
+                return
 
         self._sync_process_route_context()
         self.controller.context.setdefault("order_context", {})
@@ -2010,6 +2016,10 @@ class ProcessRoutePage(QtWidgets.QWidget):
         self.controller.context.setdefault("process_plan_context", {})
         self.controller.context.setdefault("process_route_context", {})
         self.controller.context.setdefault("constraint_context", {})
+        self.controller.context["prepare_page_target_instruction"] = {
+            "prep_instruction_id": "INS-LOT-20260402-01",
+            "prep_instruction_version": 1,
+        }
         if not hasattr(self.controller, "production_context"):
             self.controller.production_context = self.controller.context
         self.controller.production_context.setdefault("order_context", self.controller.context["order_context"])
@@ -2017,6 +2027,9 @@ class ProcessRoutePage(QtWidgets.QWidget):
         self.controller.production_context.setdefault("process_plan_context", self.controller.context["process_plan_context"])
         self.controller.production_context["process_route_context"] = self.controller.context["process_route_context"]
         self.controller.production_context["constraint_context"] = self.controller.context["constraint_context"]
+        self.controller.production_context["prepare_page_target_instruction"] = self.controller.context[
+            "prepare_page_target_instruction"
+        ]
         if not hasattr(self.controller, "show_page"):
             QMessageBox.critical(self, "下一步", "主窗口未提供页面切换能力。")
             return

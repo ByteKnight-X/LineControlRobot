@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -17,6 +18,26 @@ try:
     from PyQt5.QtWebEngineWidgets import QWebEngineView
 except ImportError:  # pragma: no cover
     QWebEngineView = None
+
+
+VISIBLE_PRINT_PARAM_FIELDS = [
+    ("layer_name", "层名称"),
+    ("ink_type", "印料类型"),
+    ("ink_color", "印料颜色"),
+    ("passes", "刮刀次数"),
+    ("squeegee_angle_deg", "刮刀角度(°)"),
+    ("squeegee_speed_mps", "刮刀速度(m/s)"),
+    ("spacing_mm", "间距(mm)"),
+    ("compression_mm", "压缩量(mm)"),
+    ("print_mode", "印刷模式"),
+    ("print_range_mm", "印刷范围(mm)"),
+    ("dry_temp_c", "烘干温度(°C)"),
+    ("dry_time_s", "烘干时间(s)"),
+    ("ingredients", "配方"),
+]
+COLOR_PARAM_KEY = "ink_color"
+FIXED_PROCESS_ROUTE_ID = "PR-20260401-8Pro-40-41-Line_001"
+FIXED_PROCESS_ROUTE_VERSION = 1
 
 
 class PreviewWebEngineView(QWebEngineView):
@@ -321,6 +342,159 @@ def _mesh_index_value(value: Any, fallback: int) -> int:
         return fallback
 
 
+def _parse_operation_dict(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return {}
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return {}
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
+
+
+def _normalize_hex_color(raw_value: str) -> str | None:
+    text = raw_value.strip()
+    if not text:
+        return None
+    candidate = text[1:] if text.startswith("#") else text
+    if re.fullmatch(r"[0-9a-fA-F]{6}", candidate):
+        return f"#{candidate.upper()}"
+    if re.fullmatch(r"[0-9a-fA-F]{3}", candidate):
+        expanded = "".join(ch * 2 for ch in candidate.upper())
+        return f"#{expanded}"
+    return None
+
+
+def _display_operation_value(field_name: str, value: Any) -> str:
+    if value in (None, ""):
+        return ""
+    if field_name == "print_range_mm":
+        return _display_print_range_value(value)
+    if field_name == "ingredients":
+        return _display_ingredients_value(value)
+    return _text(value)
+
+
+def _display_print_range_value(value: Any) -> str:
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return _text(value)
+
+
+def _display_ingredients_value(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return _text(value)
+
+
+def _parse_range_value(raw_value: str) -> Any:
+    text = raw_value.strip()
+    if not text:
+        return []
+    range_match = re.fullmatch(r"\s*(.+?)\s*-\s*(.+?)\s*", text)
+    if range_match:
+        left = _to_number(range_match.group(1).strip())
+        right = _to_number(range_match.group(2).strip())
+        if not isinstance(left, str) and not isinstance(right, str):
+            return [left, right]
+    parts = [part.strip() for part in text.split(",") if part.strip()]
+    if not parts:
+        return []
+    parsed = [_to_number(part) for part in parts]
+    if all(not isinstance(item, str) for item in parsed):
+        return parsed
+    return text
+
+
+def _parse_json_text_value(raw_value: str) -> Any:
+    text = raw_value.strip()
+    if not text:
+        return {}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return text
+
+
+def _parse_structured_or_range_value(raw_value: str) -> Any:
+    text = raw_value.strip()
+    if not text:
+        return []
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return _parse_range_value(text)
+    return parsed
+
+
+def _normalize_operation_dict(value: Any) -> Dict[str, Any]:
+    raw = _parse_operation_dict(value)
+    normalized = dict(raw)
+
+    if "squeegee_angle_deg" not in normalized and "squeegee_angle" in raw:
+        normalized["squeegee_angle_deg"] = raw.get("squeegee_angle")
+    if "squeegee_speed_mps" not in normalized and "squeegee_speed" in raw:
+        normalized["squeegee_speed_mps"] = raw.get("squeegee_speed")
+    if "spacing_mm" not in normalized and "off_contact_mm" in raw:
+        normalized["spacing_mm"] = raw.get("off_contact_mm")
+    if "dry_temp_c" not in normalized:
+        if "dry_temp_c" in raw:
+            normalized["dry_temp_c"] = raw.get("dry_temp_c")
+        elif "drying_temp_c" in raw:
+            normalized["dry_temp_c"] = raw.get("drying_temp_c")
+    if "dry_time_s" not in normalized:
+        if "dry_time_s" in raw:
+            normalized["dry_time_s"] = raw.get("dry_time_s")
+        elif "dyring_time_s" in raw:
+            normalized["dry_time_s"] = raw.get("dyring_time_s")
+
+    ink_payload = raw.get("ink")
+    if isinstance(ink_payload, dict):
+        ingredients = ink_payload.get("ingredients")
+        weight = ink_payload.get("weight_kg")
+        if isinstance(ingredients, dict):
+            merged_ingredients: Dict[str, Any] = {"ingredients": dict(ingredients)}
+            if weight not in (None, ""):
+                merged_ingredients["weight_kg"] = weight
+            normalized["ingredients"] = merged_ingredients
+        elif weight not in (None, "") and "ingredients" not in normalized:
+            normalized["ingredients"] = {"weight_kg": weight}
+
+    return normalized
+
+
+def _merge_operation_updates(base_operation: Dict[str, Any], edited_values: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(base_operation)
+    for legacy_key in (
+        "squeegee_angle",
+        "squeegee_speed",
+        "off_contact_mm",
+        "drying_temp_c",
+        "dyring_time_s",
+        "ingredients",
+    ):
+        merged.pop(legacy_key, None)
+    if isinstance(merged.get("ink"), dict):
+        ink_payload = dict(merged["ink"])
+        ingredients_value = edited_values.get("ingredients")
+        if isinstance(ingredients_value, dict):
+            if "ingredients" in ingredients_value and isinstance(ingredients_value.get("ingredients"), dict):
+                ink_payload["ingredients"] = dict(ingredients_value["ingredients"])
+            elif ingredients_value:
+                ink_payload["ingredients"] = dict(ingredients_value)
+            if "weight_kg" in ingredients_value:
+                ink_payload["weight_kg"] = ingredients_value.get("weight_kg")
+        merged["ink"] = ink_payload
+    merged.update(edited_values)
+    return merged
+
+
 class ProcessPlanPickerDialog(QtWidgets.QDialog):
     """Dialog for selecting and importing a historical process plan."""
 
@@ -463,6 +637,8 @@ class SeparationPage(QtWidgets.QWidget):
             "page_status": "draft",
             "loading": False,
             "dirty": False,
+            "load_message": "",
+            "print_param_rows": {},
             "db_process_plan": [],
             "current_plan": {
                 "process_plan_header": {},
@@ -509,8 +685,20 @@ class SeparationPage(QtWidgets.QWidget):
         self.canvasLayout.setStretch(1, 1)
         self.canvasLayout.setStretch(2, 0)
         self.graphicsPreview.setVisible(True)
-        self.txtSOPSteps.setReadOnly(False)
         self.txtValidationInfo.setReadOnly(True)
+        self.tblPrintParams.setColumnCount(2)
+        self.tblPrintParams.setRowCount(len(VISIBLE_PRINT_PARAM_FIELDS))
+        self.tblPrintParams.setHorizontalHeaderLabels(["参数", "数值"])
+        self.tblPrintParams.setAlternatingRowColors(True)
+        self.tblPrintParams.verticalHeader().setVisible(False)
+        self.tblPrintParams.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        self.tblPrintParams.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.tblPrintParams.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeToContents
+        )
+        self.tblPrintParams.horizontalHeader().setSectionResizeMode(
+            1, QtWidgets.QHeaderView.Stretch
+        )
 
     def _bind_actions(self) -> None:
         if self._actions_bound:
@@ -528,7 +716,6 @@ class SeparationPage(QtWidgets.QWidget):
             self.txtWireModel,
             self.txtWireDia,
             self.txtFrameSpec,
-            self.txtSOPSteps,
         ]
         for editor in editors:
             if isinstance(editor, QtWidgets.QTextEdit):
@@ -539,11 +726,13 @@ class SeparationPage(QtWidgets.QWidget):
         self.spinStretchAngle.valueChanged.connect(self._mark_dirty)
         self.spinTpi.valueChanged.connect(self._mark_dirty)
         self.spinTension.valueChanged.connect(self._mark_dirty)
+        self.tblPrintParams.itemChanged.connect(self._on_print_params_item_changed)
         self._actions_bound = True
 
     def refresh_data(self) -> None:
         context = getattr(self.controller, "context", {}) or {}
         plan_context = context.get("process_plan_context")
+        load_message = _text(context.pop("process_plan_load_message", "")).strip()
 
         if isinstance(plan_context, dict):
             header = plan_context.get("process_plan_header")
@@ -570,6 +759,7 @@ class SeparationPage(QtWidgets.QWidget):
             "errors": [],
             "risks": [],
         }
+        self.page_state["load_message"] = load_message
         self.page_state["active_mesh_index"] = 0
         header_data = self.page_state["current_plan"]["process_plan_header"]
         self.page_state["focus"]["selected_process_plan_id"] = header_data.get("process_plan_id")
@@ -669,7 +859,7 @@ class SeparationPage(QtWidgets.QWidget):
         self.spinStretchAngle.setValue(float(line.get("stretching_degree") or 0))
         self.spinTpi.setValue(int(float(line.get("tpi") or 0)))
         self.spinTension.setValue(float(line.get("tension") or 0))
-        self.txtSOPSteps.setPlainText(_text(line.get("operation")))
+        self._render_print_params_table(line)
 
         self._render_validation()
         self._render_preview()
@@ -680,6 +870,9 @@ class SeparationPage(QtWidgets.QWidget):
     def _render_validation(self) -> None:
         summary = self.page_state["validation_summary"]
         lines = [f"页面状态：{self.page_state['page_status']}"]
+        load_message = _text(self.page_state.get("load_message")).strip()
+        if load_message:
+            lines.append(f"加载结果：{load_message}")
         lines.append(f"是否有未保存修改：{'是' if self.page_state['dirty'] else '否'}")
         lines.append(f"校验状态：{'通过' if summary.get('passed') else '未通过'}")
         errors = _message_lines(summary.get("errors"))
@@ -744,6 +937,114 @@ class SeparationPage(QtWidgets.QWidget):
             return lines[0]
         return lines[index]
 
+    def _print_param_row_index(self, field_name: str) -> int:
+        row = self.page_state.get("print_param_rows", {}).get(field_name)
+        return row if isinstance(row, int) else -1
+
+    def _update_color_swatch(self, swatch: QtWidgets.QFrame, raw_value: str) -> None:
+        color_value = _normalize_hex_color(raw_value)
+        if color_value:
+            swatch.setStyleSheet(
+                "QFrame {"
+                f"background-color: {color_value};"
+                "border: 1px solid #bfbfbf;"
+                "border-radius: 3px;"
+                "}"
+            )
+            swatch.setToolTip(color_value)
+            return
+        swatch.setStyleSheet(
+            "QFrame {"
+            "background-color: transparent;"
+            "border: 1px solid #d9d9d9;"
+            "border-radius: 3px;"
+            "}"
+        )
+        swatch.setToolTip("未识别有效颜色")
+
+    def _build_color_cell_widget(self, initial_value: str) -> QtWidgets.QWidget:
+        container = QtWidgets.QWidget(self.tblPrintParams)
+        layout = QtWidgets.QHBoxLayout(container)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(8)
+
+        editor = QtWidgets.QLineEdit(container)
+        editor.setObjectName("printParamColorEditor")
+        editor.setText(initial_value)
+
+        swatch = QtWidgets.QFrame(container)
+        swatch.setObjectName("printParamColorSwatch")
+        swatch.setFixedSize(18, 18)
+
+        layout.addWidget(editor, 1)
+        layout.addWidget(swatch, 0, QtCore.Qt.AlignVCenter)
+        self._update_color_swatch(swatch, initial_value)
+        editor.textChanged.connect(
+            lambda text, target=swatch: self._update_color_swatch(target, text)
+        )
+        editor.textChanged.connect(lambda _text: self._mark_dirty())
+        return container
+
+    def _render_print_params_table(self, line: Dict[str, Any]) -> None:
+        operation = _normalize_operation_dict(line.get("operation"))
+        self.tblPrintParams.blockSignals(True)
+        self.tblPrintParams.setRowCount(len(VISIBLE_PRINT_PARAM_FIELDS))
+        self.page_state["print_param_rows"] = {
+            field_name: row for row, (field_name, _label) in enumerate(VISIBLE_PRINT_PARAM_FIELDS)
+        }
+        for row, (field_name, label) in enumerate(VISIBLE_PRINT_PARAM_FIELDS):
+            label_item = QtWidgets.QTableWidgetItem(label)
+            label_item.setFlags(label_item.flags() & ~QtCore.Qt.ItemIsEditable)
+            self.tblPrintParams.setItem(row, 0, label_item)
+            self.tblPrintParams.removeCellWidget(row, 1)
+            value_text = _display_operation_value(field_name, operation.get(field_name))
+            if field_name == COLOR_PARAM_KEY:
+                self.tblPrintParams.takeItem(row, 1)
+                self.tblPrintParams.setCellWidget(row, 1, self._build_color_cell_widget(value_text))
+                continue
+            value_item = QtWidgets.QTableWidgetItem(value_text)
+            self.tblPrintParams.setItem(row, 1, value_item)
+        self.tblPrintParams.blockSignals(False)
+
+    def _collect_print_params_from_table(self, base_operation: Dict[str, Any]) -> str:
+        edited_values: Dict[str, Any] = {}
+        numeric_fields = {
+            "passes",
+            "squeegee_angle_deg",
+            "squeegee_speed_mps",
+            "spacing_mm",
+            "compression_mm",
+            "dry_temp_c",
+            "dry_time_s",
+        }
+        for row, (field_name, _label) in enumerate(VISIBLE_PRINT_PARAM_FIELDS):
+            if field_name == COLOR_PARAM_KEY:
+                cell_widget = self.tblPrintParams.cellWidget(row, 1)
+                editor = (
+                    cell_widget.findChild(QtWidgets.QLineEdit, "printParamColorEditor")
+                    if isinstance(cell_widget, QtWidgets.QWidget)
+                    else None
+                )
+                raw_value = editor.text().strip() if editor is not None else ""
+            else:
+                item = self.tblPrintParams.item(row, 1)
+                raw_value = item.text().strip() if item is not None else ""
+            value: Any = raw_value
+            if field_name in numeric_fields:
+                value = _to_number(raw_value)
+            elif field_name == "print_range_mm":
+                value = _parse_structured_or_range_value(raw_value)
+            elif field_name == "ingredients":
+                value = _parse_json_text_value(raw_value)
+            edited_values[field_name] = value
+        merged_operation = _merge_operation_updates(base_operation, edited_values)
+        return json.dumps(merged_operation, ensure_ascii=False, separators=(",", ":"))
+
+    def _on_print_params_item_changed(self, item: QtWidgets.QTableWidgetItem) -> None:
+        if item.column() != 1:
+            return
+        self._mark_dirty()
+
     def _mark_dirty(self, *_args: Any) -> None:
         if self._setting_up_widgets or self.page_state["loading"]:
             return
@@ -792,6 +1093,7 @@ class SeparationPage(QtWidgets.QWidget):
             lines.append({"mesh_index": 1})
             self.page_state["active_mesh_index"] = 0
         line = lines[self.page_state["active_mesh_index"]]
+        base_operation = _parse_operation_dict(line.get("operation"))
         line["mesh_index"] = line.get("mesh_index") or self.page_state["active_mesh_index"] + 1
         line["material"] = self.txtWireMaterial.text().strip()
         line["mesh_model"] = self.txtWireModel.text().strip()
@@ -801,7 +1103,7 @@ class SeparationPage(QtWidgets.QWidget):
         line["tpi"] = self.spinTpi.value()
         line["tension"] = self.spinTension.value()
         line["frame_specification"] = self.txtFrameSpec.text().strip()
-        line["operation"] = self.txtSOPSteps.toPlainText().strip()
+        line["operation"] = self._collect_print_params_from_table(base_operation)
 
     def _on_prev_mesh(self) -> None:
         if self.page_state["loading"]:
@@ -1043,7 +1345,45 @@ class SeparationPage(QtWidgets.QWidget):
             return
         self._collect_current_mesh_from_widgets()
         self._sync_process_plan_context()
+        route_context, load_message = self._load_fixed_process_route_context()
+        if hasattr(self.controller, "context"):
+            self.controller.context["process_route_context"] = route_context
+            self.controller.context["process_route_load_message"] = load_message
+        if not hasattr(self.controller, "production_context"):
+            self.controller.production_context = getattr(self.controller, "context", {})
+        self.controller.production_context["process_route_context"] = route_context
+        self.controller.production_context["process_route_load_message"] = load_message
         if not hasattr(self.controller, "show_page"):
             QMessageBox.critical(self, "下一步", "主窗口未提供页面切换能力。")
             return
         self.controller.show_page("process_route_page")
+
+    def _load_fixed_process_route_context(self) -> tuple[dict, str]:
+        try:
+            detail = self.controller.backend.process_routes.detail(
+                FIXED_PROCESS_ROUTE_ID,
+                FIXED_PROCESS_ROUTE_VERSION,
+            )
+        except BackendError as exc:
+            return {}, f"固定工艺路线加载失败：{exc}"
+
+        if not all(
+            isinstance(detail.get(key), expected)
+            for key, expected in (
+                ("process_route_header", dict),
+                ("process_route_loop_line", list),
+                ("process_route_loop_step_line", list),
+            )
+        ):
+            return {}, "固定工艺路线加载失败：后端返回的工艺路线详情结构无效。"
+
+        return (
+            {
+                "process_route_header": dict(detail["process_route_header"]),
+                "process_route_loop_line": [dict(item) for item in detail["process_route_loop_line"]],
+                "process_route_loop_step_line": [
+                    dict(item) for item in detail["process_route_loop_step_line"]
+                ],
+            },
+            f"已加载固定工艺路线 {FIXED_PROCESS_ROUTE_ID} V{FIXED_PROCESS_ROUTE_VERSION}",
+        )

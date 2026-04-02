@@ -286,6 +286,8 @@ class ImportApi:
                     "source_order_line_id",
                     "sku",
                     "color",
+                    "separation_plan_id",
+                    "separation_plan_version",
                     "size",
                     "quantity_planned",
                     "status",

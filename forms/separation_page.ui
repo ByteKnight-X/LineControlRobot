@@ -320,8 +320,8 @@
                     <property name="topMargin"><number>8</number></property>
                     <property name="rightMargin"><number>10</number></property>
                     <property name="bottomMargin"><number>10</number></property>
-                    <item><widget class="QLabel" name="lblSOPTitle"><property name="text"><string>📋 SOP描述</string></property></widget></item>
-                    <item><widget class="QTextEdit" name="txtSOPSteps"><property name="readOnly"><bool>true</bool></property></widget></item>
+                    <item><widget class="QLabel" name="lblSOPTitle"><property name="text"><string>📋 丝印参数</string></property></widget></item>
+                    <item><widget class="QTableWidget" name="tblPrintParams"/></item>
                   </layout>
                 </widget>
               </item>

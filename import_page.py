@@ -37,6 +37,8 @@ DISABLED_BUTTON_STYLE = (
 )
 
 DEFAULT_PENDING_PRODUCTION_LINE_ID = "F01-SP01"
+FIXED_PROCESS_PLAN_ID = "PP-8Pro-梦幻世界-40-41"
+FIXED_PROCESS_PLAN_VERSION = 1
 
 DB_ALLOWED_STATUSES = {"created", "validated", "released", "finished"}
 PENDING_ALLOWED_STATUSES = {"created", "validated"}
@@ -120,8 +122,11 @@ def _extract_order_lines(item: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _persisted_order_id(lot: Dict[str, Any]) -> str:
     header = lot.get("lot_header")
     if isinstance(header, dict):
+        source_order_id = header.get("source_order_id")
+        if source_order_id not in (None, ""):
+            return _display_order_id(source_order_id)
         return _safe_text(header.get("order_id"))
-    return _safe_text(lot.get("order_id"))
+    return _display_order_id(lot.get("source_order_id")) or _safe_text(lot.get("order_id"))
 
 
 def _candidate_source_order_id(header: Dict[str, Any]) -> str:
@@ -217,7 +222,9 @@ def _normalize_pending_candidate(candidate: Dict[str, Any]) -> Dict[str, Any]:
                 "source_order_line_id": line.get("source_order_line_id", line.get("order_line_id")),
                 "sku": line.get("sku", ""),
                 "color": line.get("color", ""),
-                "color_separation_plan": line.get("color_separation_plan"),
+                "pattern_design_id": line.get("pattern_design_id"),
+                "separation_plan_id": line.get("separation_plan_id"),
+                "separation_plan_version": line.get("separation_plan_version") or 1,
                 "size": line.get("size", ""),
                 "quantity_planned": line.get("quantity_planned", ""),
                 "status": _normalize_pending_status(line.get("status"), fallback="created"),
@@ -266,13 +273,21 @@ def _parse_import_order_xml(xml_bytes: bytes) -> Dict[str, Any]:
 
     lines: List[Dict[str, Any]] = []
     for line_node in lines_node.findall("./line"):
+        sku = _safe_text(line_node.findtext("sku")).strip()
+        color = _safe_text(line_node.findtext("color")).strip()
+        size = _safe_text(line_node.findtext("size")).strip()
+        pattern_design_id = _safe_text(line_node.findtext("pattern_design_id")).strip()
+        separation_plan_id = _safe_text(line_node.findtext("separation_plan_id")).strip()
+        legacy_separation_plan_id = _safe_text(line_node.findtext("color_separation_plan")).strip()
         line = {
             "order_id": _safe_text(line_node.findtext("order_id")).strip() or header["order_id"],
             "order_line_id": _normalize_int(line_node.findtext("order_line_id")),
-            "sku": _safe_text(line_node.findtext("sku")).strip(),
-            "size": _safe_text(line_node.findtext("size")).strip(),
-            "color": _safe_text(line_node.findtext("color")).strip(),
-            "color_separation_plan": _safe_text(line_node.findtext("color_separation_plan")).strip(),
+            "sku": sku,
+            "size": size,
+            "color": color,
+            "pattern_design_id": pattern_design_id or f"PD-{sku}-{color}-{size}",
+            "separation_plan_id": separation_plan_id or legacy_separation_plan_id or f"CS-{sku}-{color}-{size}",
+            "separation_plan_version": _normalize_int(line_node.findtext("separation_plan_version")) or 1,
             "quantity_planned": _normalize_int(line_node.findtext("quantity_planned")),
             "status": "validated",
         }
@@ -324,7 +339,7 @@ def _filter_table(table: QTableWidget, keyword: str) -> None:
 
 
 class OrderLineAssignDialog(QtWidgets.QDialog):
-    LINE_HEADERS = ["订单行ID", "SKU", "尺码", "颜色", "计划数量", "状态"]
+    LINE_HEADERS = ["订单行ID", "SKU", "尺码", "颜色", "图案设计ID", "分色方案ID", "分色版本", "计划数量", "状态"]
     LOT_HEADERS = ["关联订单ID", "批次ID", "开始时间", "产线编号", "进度", "状态"]
 
     def __init__(
@@ -430,6 +445,9 @@ class OrderLineAssignDialog(QtWidgets.QDialog):
             line.get("sku", ""),
             line.get("size", ""),
             line.get("color", ""),
+            line.get("pattern_design_id", ""),
+            line.get("separation_plan_id", ""),
+            line.get("separation_plan_version", ""),
             line.get("quantity_planned", ""),
             "已导批" if imported else (line.get("status", "") or "未导批"),
         ]
@@ -651,7 +669,9 @@ class OrderLineAssignDialog(QtWidgets.QDialog):
                     "source_order_line_id": source_order_line_id,
                     "sku": line.get("sku", ""),
                     "color": line.get("color", ""),
-                    "color_separation_plan": line.get("color_separation_plan"),
+                    "pattern_design_id": line.get("pattern_design_id"),
+                    "separation_plan_id": line.get("separation_plan_id"),
+                    "separation_plan_version": line.get("separation_plan_version") or 1,
                     "size": line.get("size", ""),
                     "quantity_planned": line.get("quantity_planned", ""),
                     "status": "created",
@@ -692,7 +712,7 @@ class OrderLineAssignDialog(QtWidgets.QDialog):
 
 
 class LotDetailDialog(QtWidgets.QDialog):
-    LINE_HEADERS = ["关联订单ID", "关联订单行ID", "SKU", "尺码", "颜色", "计划数量", "状态"]
+    LINE_HEADERS = ["关联订单ID", "关联订单行ID", "SKU", "尺码", "颜色", "分色方案ID", "分色版本", "计划数量", "状态"]
 
     def __init__(
         self,
@@ -801,6 +821,8 @@ class LotDetailDialog(QtWidgets.QDialog):
                     line.get("sku", ""),
                     line.get("size", ""),
                     line.get("color", ""),
+                    line.get("separation_plan_id", ""),
+                    line.get("separation_plan_version", ""),
                     line.get("quantity_planned", ""),
                     line.get("status", ""),
                 ]
@@ -913,7 +935,7 @@ class ImportPage(QtWidgets.QWidget):
         self.persisted_lot_rows: List[Dict[str, Any]] = []
         self.pending_lot_rows: List[Dict[str, Any]] = []
         self.pending_validation_results: Dict[str, Dict[str, Any]] = {}
-        self.last_feedback_text = "请先通过“本地导入”读取生产订单。"
+        self.last_feedback_text = "请先通过“本地导入”读取生产订单，或点击“刷新数据”从后端数据库同步。"
 
         self._setup_ui()
         self.refresh_data()
@@ -921,6 +943,8 @@ class ImportPage(QtWidgets.QWidget):
     def _setup_ui(self) -> None:
         _setup_table(self.tblProductionOrders, self.ORDER_HEADERS)
         _setup_table(self.tblBatchOrders, self.LOT_HEADERS)
+        self.btnSyncErp.setText("刷新数据")
+        self.btnSyncErp.setToolTip("从当前后端数据库刷新订单和批次，不会主动从 ERP 拉取。")
 
         self.tblProductionOrders.cellDoubleClicked.connect(self.on_order_double_clicked)
         self.tblBatchOrders.cellDoubleClicked.connect(self.on_lot_double_clicked)
@@ -966,6 +990,15 @@ class ImportPage(QtWidgets.QWidget):
                 "errors": [],
                 "risks": [],
                 "message": "",
+            },
+            "sync_diagnostics": {
+                "raw_orders": 0,
+                "display_orders": 0,
+                "raw_lots": 0,
+                "display_lots": 0,
+                "unknown_order_statuses": [],
+                "unknown_lot_statuses": [],
+                "lot_detail_failures": [],
             },
         }
 
@@ -1235,26 +1268,38 @@ class ImportPage(QtWidgets.QWidget):
             )
         _fill_table(self.tblProductionOrders, rows)
         self.refresh_order_list()
-    
-    def _filtered_db_orders(self, order_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+    def _normalize_db_orders(
+        self, order_items: List[Dict[str, Any]]
+    ) -> tuple[List[Dict[str, Any]], List[str], int]:
         result: List[Dict[str, Any]] = []
+        unknown_statuses: set[str] = set()
         for item in order_items:
             header = _extract_order_header(item)
             if not header:
                 continue
-            if _normalize_db_status(header.get("status")) not in DB_ALLOWED_STATUSES:
-                continue
+            normalized_status = _normalize_db_status(header.get("status"))
+            if normalized_status and normalized_status not in DB_ALLOWED_STATUSES:
+                unknown_statuses.add(normalized_status)
             result.append(item)
-        return result
+        return result, sorted(unknown_statuses), len(_as_list(order_items))
 
-    def _filtered_db_lots(self, lots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        return [
-            lot
-            for lot in lots
-            if isinstance(lot, dict)
-            and _normalize_db_status((lot.get("lot_header") or {}).get("status", lot.get("status")))
-            in DB_ALLOWED_STATUSES
-        ]
+    def _normalize_db_lots(
+        self, lots: List[Dict[str, Any]]
+    ) -> tuple[List[Dict[str, Any]], List[str], int]:
+        result: List[Dict[str, Any]] = []
+        unknown_statuses: set[str] = set()
+        raw_count = 0
+        for lot in lots:
+            if not isinstance(lot, dict):
+                continue
+            raw_count += 1
+            header = lot.get("lot_header") if isinstance(lot.get("lot_header"), dict) else lot
+            normalized_status = _normalize_db_status(header.get("status"))
+            if normalized_status and normalized_status not in DB_ALLOWED_STATUSES:
+                unknown_statuses.add(normalized_status)
+            result.append(lot)
+        return result, sorted(unknown_statuses), raw_count
 
     def _collect_imported_order_line_refs(self) -> set[tuple[str, int]]:
         refs: set[tuple[str, int]] = set()
@@ -1312,7 +1357,12 @@ class ImportPage(QtWidgets.QWidget):
                     raise BackendError(
                         f"订单列表结构无效：production_order_list 第 {index} 项缺少 production_order_header。"
                     )
-            self.page_state["data"]["db_orders"] = self._filtered_db_orders(order_items)
+            normalized_orders, unknown_statuses, raw_count = self._normalize_db_orders(order_items)
+            self.page_state["data"]["db_orders"] = normalized_orders
+            sync_diagnostics = self.page_state["sync_diagnostics"]
+            sync_diagnostics["raw_orders"] = raw_count
+            sync_diagnostics["display_orders"] = len(normalized_orders)
+            sync_diagnostics["unknown_order_statuses"] = unknown_statuses
         except BackendError as exc:
             return False, str(exc)
         return True, ""
@@ -1321,16 +1371,27 @@ class ImportPage(QtWidgets.QWidget):
         try:
             payload = self.imports_api.list_lots()
             detailed_lots: List[Dict[str, Any]] = []
+            lot_detail_failures: List[str] = []
             for lot in _lots(payload):
                 if not isinstance(lot, dict):
                     continue
                 lot_id = _safe_text(lot.get("lot_id"))
                 if not lot_id:
                     continue
-                detail_payload = self.imports_api.get_lot(lot_id)
+                try:
+                    detail_payload = self.imports_api.get_lot(lot_id)
+                except BackendError:
+                    lot_detail_failures.append(lot_id)
+                    continue
                 lot_header, lot_lines = _parse_lot_detail(detail_payload)
                 detailed_lots.append({"lot_header": lot_header, "lot_line": lot_lines})
-            self.page_state["data"]["db_lots"] = self._filtered_db_lots(detailed_lots)
+            normalized_lots, unknown_statuses, raw_count = self._normalize_db_lots(detailed_lots)
+            self.page_state["data"]["db_lots"] = normalized_lots
+            sync_diagnostics = self.page_state["sync_diagnostics"]
+            sync_diagnostics["raw_lots"] = raw_count
+            sync_diagnostics["display_lots"] = len(normalized_lots)
+            sync_diagnostics["unknown_lot_statuses"] = unknown_statuses
+            sync_diagnostics["lot_detail_failures"] = lot_detail_failures
         except BackendError as exc:
             return False, str(exc)
         return True, ""
@@ -1338,17 +1399,36 @@ class ImportPage(QtWidgets.QWidget):
     def sync_with_erp(self) -> None:
         self._set_loading(True)
         try:
+            self.page_state["sync_diagnostics"] = {
+                "raw_orders": 0,
+                "display_orders": 0,
+                "raw_lots": 0,
+                "display_lots": 0,
+                "unknown_order_statuses": [],
+                "unknown_lot_statuses": [],
+                "lot_detail_failures": [],
+            }
             order_success, order_error = self.load_orders_into_state()
             lot_success, lot_error = self.load_lots_into_state()
             self.refresh_data()
             if order_success and lot_success:
-                self.set_feedback(
-                    "ERP 同步完成。\n"
-                    f"- db_orders：{len(self.page_state['data']['db_orders'])}\n"
-                    f"- db_lots：{len(self.page_state['data']['db_lots'])}\n"
-                    f"- pending_orders：{len(self.page_state['data']['pending_orders'])}\n"
-                    f"- pending_lots：{len(self.page_state['data']['pending_lots'])}"
-                )
+                diagnostics = self.page_state["sync_diagnostics"]
+                feedback_lines = [
+                    "同步完成（来源：后端数据库）。",
+                    f"- backend_url：{getattr(self.controller.backend, 'base_url', '未提供')}",
+                    f"- raw_orders：{diagnostics['raw_orders']}",
+                    f"- display_orders：{diagnostics['display_orders']}",
+                    f"- raw_lots：{diagnostics['raw_lots']}",
+                    f"- display_lots：{diagnostics['display_lots']}",
+                    f"- pending_orders：{len(self.page_state['data']['pending_orders'])}",
+                    f"- pending_lots：{len(self.page_state['data']['pending_lots'])}",
+                    f"- unknown_order_statuses：{diagnostics['unknown_order_statuses']}",
+                    f"- unknown_lot_statuses：{diagnostics['unknown_lot_statuses']}",
+                    f"- lot_detail_failures：{diagnostics['lot_detail_failures']}",
+                ]
+                if diagnostics["display_orders"] == 0 and diagnostics["display_lots"] == 0:
+                    feedback_lines.append("- 提示：当前后端数据库无订单/批次数据，本次操作未执行 ERP 拉取。")
+                self.set_feedback("\n".join(feedback_lines))
             else:
                 errors = []
                 if not order_success:
@@ -1434,7 +1514,9 @@ class ImportPage(QtWidgets.QWidget):
                 "source_order_line_id": source_order_line_id,
                 "sku": line.get("sku", ""),
                 "color": line.get("color", ""),
-                "color_separation_plan": line.get("color_separation_plan"),
+                "pattern_design_id": line.get("pattern_design_id"),
+                "separation_plan_id": line.get("separation_plan_id"),
+                "separation_plan_version": line.get("separation_plan_version") or 1,
                 "size": line.get("size", ""),
                 "quantity_planned": line.get("quantity_planned", ""),
                 "status": _normalize_pending_status(result.get("status"), fallback="created"),
@@ -1546,7 +1628,8 @@ class ImportPage(QtWidgets.QWidget):
                     "source_order_line_id": line.get("source_order_line_id"),
                     "sku": line.get("sku"),
                     "color": line.get("color"),
-                    "color_separation_plan": line.get("color_separation_plan"),
+                    "separation_plan_id": line.get("separation_plan_id"),
+                    "separation_plan_version": line.get("separation_plan_version") or 1,
                     "size": line.get("size"),
                     "quantity_planned": line.get("quantity_planned"),
                 }
@@ -1571,15 +1654,38 @@ class ImportPage(QtWidgets.QWidget):
     ) -> None:
         lot_header, lot_lines = _parse_lot_detail(lot_payload)
         order_header, order_lines = _parse_order_detail(order_payload)
+        process_plan_context, load_message = self._load_fixed_process_plan_context()
         lot_context = {"lot_header": lot_header, "lot_line": lot_lines}
         order_context = {"order_header": order_header, "order_line": order_lines}
         self.controller.context["lot_context"] = lot_context
         self.controller.context["order_context"] = order_context
-        self.controller.context.setdefault("process_plan_context", {})
+        self.controller.context["process_plan_context"] = process_plan_context
+        self.controller.context["process_plan_load_message"] = load_message
         self.controller.context.setdefault("process_route_context", {})
         self.controller.context.setdefault("constraint_context", {})
         print(self.controller.context)
         self.controller.show_page("separation_page")
+
+    def _load_fixed_process_plan_context(self) -> tuple[Dict[str, Any], str]:
+        try:
+            detail = self.controller.backend.process_plans.detail(
+                FIXED_PROCESS_PLAN_ID,
+                FIXED_PROCESS_PLAN_VERSION,
+            )
+        except BackendError as exc:
+            return {}, f"固定工艺方案加载失败：{exc}，已进入草稿模式。"
+
+        header = detail.get("process_plan_header")
+        lines = detail.get("process_plan_line")
+        if not isinstance(header, dict) or not isinstance(lines, list):
+            return {}, "固定工艺方案加载失败：后端返回的方案详情结构无效，已进入草稿模式。"
+        return (
+            {
+                "process_plan_header": dict(header),
+                "process_plan_line": [dict(item) for item in lines if isinstance(item, dict)],
+            },
+            f"已加载固定工艺方案 {FIXED_PROCESS_PLAN_ID} V{FIXED_PROCESS_PLAN_VERSION}",
+        )
 
     def _commit_pending_lot_and_open_separation(self, candidate_row: Dict[str, Any]) -> None:
         candidate_header = dict(candidate_row.get("lot_header") or {})

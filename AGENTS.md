@@ -1,82 +1,230 @@
-# AGENTS.md — 产线控制桌面端 V0（批次单自动生成与校验主线）
+# AGENTS.md — 产线控制桌面端 V0（工艺设计页面主线）
 
 ## 背景
 本仓库为产线控制前端桌面版。
 
-当前增量目标聚焦《`specs/[FeatureDoc]批次单自动生成与校验B0.0.pdf`》定义的“批次单自动生成与显式校验”链路，主链路收敛为：
-- 生产任务导入（`production_order`）
-- 候选批次单自动生成与显式校验（`lot` / `ai`）
+本次增量更新仅针对工艺设计页面。当前页面主链路聚焦：
+- 从上游批次进入工艺设计
+- 历史方案版本库导入
+- 工艺方案查看与编辑
+- 网版切换联动展示
+- 工艺方案显式校验
+- 工艺方案批准与冻结
+- 冻结后进入工艺路线页面
 
-本阶段是在已存在页面和功能基础上的增量约束补充。除批次单自动生成与校验相关内容外，其它已有功能、页面、模块保持不变，不在本次文档更新范围内。
+工艺设计页相关接口说明必须同时对齐：
+- 后端 `api.py` / `schemas.py`
+- 后端 `README.md`
+- 前端 `utilities/backend_client.py` 与 `separation_page.py` 的实际调用方式
+
+其它页面、模块、流程保持现状，不在本次文档更新范围内。
 
 ## 目标
-- 支持基于已导入生产任务生成候选批次单。
-- 支持对候选批次单进行显式校验。
-- 支持前端展示候选结果与校验结果。
-- 保持导入页相关交互语义稳定。
+- 支持从上游批次上下文进入工艺设计页面。
+- 支持历史工艺方案列表读取与版本库手动导入。
+- 支持展示工艺方案头、网版参数、图案信息、SOP 信息。
+- 支持通过 `[<]` / `[>]` 切换不同网版，并联动图案区、参数区、SOP 区。
+- 支持显式校验当前工艺方案。
+- 支持显式展示校验结果。
+- 支持批准并冻结当前工艺方案。
+- 支持冻结后进入工艺路线页面。
+- 保持工艺设计页面既有交互语义稳定。
 - 页面须本地可运行、可联调、可验收。
-- `forms/import_page.ui` 本次不能改。
+- 前端请求路径、请求体、响应字段和页面解析逻辑必须与当前后端接口一致。
+- 不允许文档指导前端去依赖后端当前不存在的字段。
+- `forms/separation_page.ui` 本次不能改。
 
 ## 技术约束
 - Python 3.10+
 - PyQt5 >= 5.15.7, PyQtWebEngine >= 5.15.7, PyQt5-sip
 - requests >= 2.31.0
 - 遵循 Google Python Style Guide
+- 工艺设计页逻辑由 `separation_page.py` 承载
+- 工艺设计页后端调用统一通过 `utilities/backend_client.py` 封装，不允许页面层绕过客户端直接自造接口契约
+- 当前联调契约以 `../BackEnd_V0/backend/app/api.py`、`../BackEnd_V0/backend/app/schemas.py`、`../BackEnd_V0/README.md` 为准
+- 当前前端解析逻辑必须与后端 schema 对齐；若前端为兼容历史数据保留兜底解析，不能把兜底字段写成主契约
 - 后端默认本地联调地址：`http://127.0.0.1:18000`
-- 时间字段以 Unix timestamp / timestamp_ms 为准，前端展示时按东八区 datetime 处理
-- 前端通过 `utilities/backend_client.py` 封装后端交互
 - 不在生成的 `_ui.py` 中手改逻辑
 - 保持项目相对路径处理；不要写死 Windows 绝对路径
 
 ## 实现约束
-- 事实与实现依据：
-  - 首要依据：`specs/[FeatureDoc]批次单自动生成与校验B0.0.pdf`
-  - 其它已有功能与页面不在本次文档更新范围内
-- UI 基准：`forms/import_page.ui`（本次明确不得修改，不得调整信息架构、控件语义或按钮行为定义）
-- Python 层职责：加载现有 UI、绑定事件、组织页面状态、调用 `utilities/backend_client.py` 完成后端交互
-- 页面职责围绕生产任务生成候选批次单，并对候选批次单执行显式校验
-- 候选结果与校验结果必须显式展示，不得静默失败
-- 与批次单相关的前端逻辑必须区分“候选结果”和“落库结果”：
-  - `POST /ai/generate_lots` 只返回候选批次单，不落库
-  - `POST /ai/validate_lots` 只返回校验结果，不落库
-  - 不得把候选结果当成已落库结果使用
-- 页面核心数据围绕以下结构组织：
-  - `production_order_header`
-  - `production_order_line`
-  - `lot_header`
-  - `lot_line`
-- 相关数据对象与字段命名应尽量贴合功能文档，不随意自造同义结构
-- `lot_header` 典型关键字段至少保留：
-  - `lot_id`
-  - `source_order_id`
-  - `production_line_id`
-  - `status`
-- `lot_line` 典型关键字段至少保留：
-  - `lot_id`
-  - `lot_line_id`
-  - `source_order_id`
-  - `source_order_line_id`
-  - `color_separation_plan`
-- `production_order` 与 `lot` 需要保留状态字段
-- 标识符和关联关系应保持可追溯：
-  - `order_id` 示例：`PO-20260206-01`
-  - `lot_id` 示例：`LOT-20260206-001`
-  - `lot` 必须能追溯到来源订单及订单行
-- 校验结果需要显式呈现：
-  - 成功/失败布尔结果 `passed`
+- 事实与实现依据优先级：
+  - 页面主链路与产品目标依据：
+    - `specs/md_specs/工艺设计B0.1/[FeatureDoc]工艺设计B0.1.md`
+    - `specs/pdf_specs/[FeatureDoc]工艺设计B0.1.pdf`
+    - `specs/pdf_specs/[PRD]产线控制软件V0.1.pdf`
+  - 当前联调接口契约依据：
+    - `../BackEnd_V0/backend/app/api.py`
+    - `../BackEnd_V0/backend/app/schemas.py`
+    - `../BackEnd_V0/README.md`
+  - 当前前端调用落地依据：
+    - `utilities/backend_client.py`
+    - `separation_page.py`
+    - `app.py`
+  - 若功能文档、后端契约、前端现状三者不一致：
+    - 页面业务目标以功能文档为准
+    - HTTP 路径、请求体、响应字段以后端契约为准
+    - 前端调用层应调整到后端契约，不反向以兼容解析定义主契约
+- UI 基准：`forms/separation_page.ui`（本次明确不得修改，不得调整信息架构、控件语义或按钮行为定义）
+- Python 层职责仅限工艺设计页面：
+  - 加载现有 UI
+  - 绑定事件
+  - 维护页面状态
+  - 通过 `utilities/backend_client.py` 调用后端
+  - 将后端返回结构映射为页面展示
+  - 将当前工艺方案同步到 `process_plan_context`
+- 前端不得在页面层自造与后端 schema 不一致的请求体或字段名
+- 本次更新仅针对工艺设计页面，不重写、不扩展、不约束其它页面
+- 页面状态组织应围绕工艺设计页，至少覆盖：
+  - `loading`
+  - `dirty`
+  - 当前选中的历史方案 ID / 版本号
+  - 当前激活网版索引 `active_mesh_index`
+  - `db_process_plan`
+  - `current_process_plan`
+  - `validation_summary`
+- `current_process_plan` 的结构必须围绕：
+  - `process_plan_header`
+  - `process_plan_line`
+- `validation_summary` 至少包含：
+  - `passed`
   - `errors`
-  - `risk_info` 或等价风险信息
-  - 必要时展示后端 `message`
-- 缺字段、结构不匹配或后端不可达时页面须给出明确提示（不得静默失败）
-- 对现有模块采取增量方式接入，不为本次需求重写其它页面，不改变已有其它功能模块
-- 不把本次文档扩展为其它功能的开发说明
+  - `risks`
+- 版本库弹窗状态必须显式维护
+- `dirty` 与校验状态联动：
+  - 任意编辑动作应设置 `dirty = true`
+  - 编辑后应清空最近一次校验通过态
+  - 编辑后应退出最近一次 `validated` / `Frozen` 页面态
+- 产线上下文由主窗口 `context` 维护
+- 工艺设计页主要消费：
+  - `lot_context`
+  - `order_context`
+  - `process_plan_context`
+- 工艺设计页输出结果回写：
+  - `process_plan_context`
+- `separation_plan`、`separationPlan` 若仍存在，仅可作为历史兼容兜底，不得写入 `AGENTS.md` 作为主契约
+- 页面展示和内部状态中的工艺方案必须能追溯到来源批次及上游订单信息
+- 页面核心语义对象围绕以下结构组织：
+  - `process_plan_header`
+  - `process_plan_line`
+- 已落库读取模型与前端校验 / 批准上传模型不是同一个对象形态，前端不得混用字段边界，不得把详情接口、列表接口、写接口文档化为完全相同的对象形态
+- 工艺设计页接口语义必须与后端和前端调用层同时对齐：
+  - `GET /process_plan/list`
+    - 后端响应模型：`ProcessPlanListResponse`
+    - 主字段：`process_plans`
+    - 元素类型：`ProcessPlanHeaderRead`
+  - `GET /process_plan/{process_plan_id}-{process_plan_version}`
+    - 后端响应模型：`ProcessPlanDetailResponse`
+    - 主字段：`process_plan_header`、`process_plan_line`
+  - `POST /process_plan/validate`
+    - 后端请求模型：`ProcessPlanValidateRequest`
+    - 请求字段：`process_plan_header`、`process_plan_line`
+    - 后端响应模型：`ProcessPlanValidateResponse`
+    - 返回字段：`passed`、`errors`、`risks`、`status`
+  - `POST /process_plan/approve`
+    - 后端请求模型：`ProcessPlanApproveRequest`
+    - 请求字段：`process_plan_header`、`process_plan_line`
+    - 后端响应模型：`ProcessPlanApproveResponse`
+    - 返回字段：`approved`、`process_plan_id`、`process_plan_version`、`errors`、`risks`、`status`
+- `utilities/backend_client.py` 中的请求路径、请求体字段名、返回结构校验必须与上述后端模型严格一致
+- `separation_page.py` 中的解析逻辑必须与 `backend_client.py` 保持一致，不得二次发明另一套字段名
+- `process_plan_header` 已落库读取模型典型字段至少包括：
+  - `process_plan_id`
+  - `process_plan_version`
+  - `sku`
+  - `sizes`
+  - `color`
+  - `validated_by`
+  - `status`
+- `process_plan_line` 已落库读取模型典型字段至少包括：
+  - `process_plan_id`
+  - `process_plan_version`
+  - `mesh_index`
+  - `sizes`
+  - `pattern_design`
+  - `material`
+  - `mesh_model`
+  - `diameter`
+  - `stretching`
+  - `stretching_degree`
+  - `tpi`
+  - `tension`
+  - `frame_specification`
+  - `operation`
+- `process_plan_header` 上传写模型典型字段至少包括：
+  - `sku`
+  - `sizes`
+  - `color`
+  - `validated_by`
+- `process_plan_line` 上传写模型典型字段至少包括：
+  - `mesh_index`
+  - `sizes`
+  - `pattern_design`
+  - `material`
+  - `mesh_model`
+  - `diameter`
+  - `stretching`
+  - `stretching_degree`
+  - `tpi`
+  - `tension`
+  - `frame_specification`
+  - `operation`
+- 与当前后端不一致的字段不得写为主契约：
+  - 不把 `size` 写成工艺设计头对象主字段；主契约应为 `sizes`
+  - 不把 `code_range` 写成后端主契约字段
+  - 不把 `colorway` 写成后端主契约字段
+  - 不把 `db_process_plans` 写成 `GET /process_plan/list` 返回字段
+  - 不把 `process_header_line` 写成详情接口返回字段
+  - 不把 `error`、`error_info`、`risk_info` 写成 `POST /process_plan/validate` 主响应字段
+  - 不把 `separation_plan` / `separationPlan` 默认等同于工艺设计主数据模型
+  - 不把 FeatureDoc 中旧示例字段原样当作当前后端真实 schema
+- 工艺设计页相关交互语义必须保持稳定：
+  - `[版本库]`
+  - `[自动生成]`
+  - `[自动校验]`
+  - `[批准方案]`
+  - `[下一步]`
+  - `[<]`
+  - `[>]`
+- `[自动生成]` 当前前端仅保留入口，尚未接入真实生成逻辑；文档不得把其写成已完成主链路
+- `[下一步]` 仅在方案冻结后允许进入工艺路线页面
+- 校验结果与批准结果必须显式展示，不得静默失败
+- 缺字段、结构不匹配或后端不可达时页面须给出明确提示
+- 校验结果至少支持：
+  - `passed`
+  - `errors`
+  - `risks`
+  - `status`
+- 批准结果至少支持：
+  - `approved`
+  - `process_plan_id`
+  - `process_plan_version`
+  - `errors`
+  - `risks`
+  - `status`
+- `utilities/backend_client.py` 是工艺设计页后端契约的唯一封装入口
+- `backend_client.py` 中的路径常量、请求体字段、响应结构校验、字段标准化逻辑必须直接对齐后端 `api.py` / `schemas.py` / `README.md`
+- `separation_page.py` 只能消费 `backend_client.py` 暴露的稳定结构，不应绕过客户端自行兼容另一套契约
+- 若前端保留 `code_range`、`colorway` 等展示映射：
+  - 仅可作为页面展示层或兼容兜底
+  - 不得写入 `AGENTS.md` 作为主契约
+- 若前端保留 `separation_plan` 历史映射：
+  - 仅可作为过渡兜底
+  - 不得写入 `AGENTS.md` 作为主契约
+- 本次文档不得扩展为其它页面的开发说明，不描述工艺设计页面之外的页面改动
 
 ## 关键目录
-- `forms/import_page.ui`
-- `import_page.py`
+- `forms/separation_page.ui`
+- `separation_page.py`
 - `app.py`
 - `utilities/backend_client.py`
-- `specs/[FeatureDoc]批次单自动生成与校验B0.0.pdf`
+- `specs/md_specs/工艺设计B0.1/[FeatureDoc]工艺设计B0.1.md`
+- `specs/pdf_specs/[FeatureDoc]工艺设计B0.1.pdf`
+- `specs/pdf_specs/[PRD]产线控制软件V0.1.pdf`
+- `../BackEnd_V0/README.md`
+- `../BackEnd_V0/backend/app/api.py`
+- `../BackEnd_V0/backend/app/schemas.py`
+- `../BackEnd_V0/specs/[数据模型]产线控制软件V0.1.xlsx`
 
 ## 必备命令
 - 创建虚拟环境（Windows）：`python -m venv .venv_windows`
@@ -84,3 +232,4 @@
 - 安装依赖：`pip install -r requirement.txt`
 - 启动前端：`python app.py`
 - 联调前确认后端已启动：`http://127.0.0.1:18000`
+- 若联调字段或响应结构存在疑问，以后端 OpenAPI `/docs`、`api.py`、`schemas.py`、`README.md` 为准
