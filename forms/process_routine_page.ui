@@ -138,8 +138,8 @@
 
             <item><widget class="QPushButton" name="btnVersionLib"><property name="text"><string>版本库</string></property></widget></item>
             <item><widget class="QPushButton" name="btnStartSim"><property name="text"><string>启动仿真</string></property></widget></item>
-            <item><widget class="QPushButton" name="btnOptimize"><property name="text"><string>AI优化</string></property></widget></item>
-            <item><widget class="QPushButton" name="btnValidate"><property name="text"><string>AI校验</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnOptimize"><property name="text"><string>自动优化</string></property></widget></item>
+            <item><widget class="QPushButton" name="btnValidate"><property name="text"><string>自动校验</string></property></widget></item>
             <item><widget class="QPushButton" name="btnApprove"><property name="text"><string>批准方案</string></property></widget></item>
             <item><widget class="QPushButton" name="btnNext"><property name="text"><string>下一步</string></property></widget></item>
           </layout>

@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -862,7 +863,12 @@ class LotDetailDialog(QtWidgets.QDialog):
 
 
 class ThinkingDialog(QtWidgets.QDialog):
-    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(
+        self,
+        parent: Optional[QtWidgets.QWidget] = None,
+        title_text: str = "Thinking",
+        hint_text: str = "请稍候",
+    ) -> None:
         super().__init__(parent)
         self.setModal(True)
         self.setWindowTitle("")
@@ -895,12 +901,12 @@ class ThinkingDialog(QtWidgets.QDialog):
         card_layout.setContentsMargins(24, 20, 24, 20)
         card_layout.setSpacing(12)
 
-        title = QtWidgets.QLabel("Thinking")
+        title = QtWidgets.QLabel(title_text)
         title.setAlignment(QtCore.Qt.AlignCenter)
         title.setStyleSheet("font-size: 16px; font-weight: 600;")
         card_layout.addWidget(title)
 
-        hint = QtWidgets.QLabel("正在生成候选批次，请稍候")
+        hint = QtWidgets.QLabel(hint_text)
         hint.setAlignment(QtCore.Qt.AlignCenter)
         hint.setStyleSheet("font-size: 12px; color: #8c8c8c;")
         card_layout.addWidget(hint)
@@ -1656,7 +1662,11 @@ class ImportPage(QtWidgets.QWidget):
         order_header, order_lines = _parse_order_detail(order_payload)
         process_plan_context, load_message = self._load_fixed_process_plan_context()
         lot_context = {"lot_header": lot_header, "lot_line": lot_lines}
-        order_context = {"order_header": order_header, "order_line": order_lines}
+        order_context = {
+            "order_header": order_header,
+            "order_line": order_lines,
+            "pattern_designs": _as_list(order_payload.get("pattern_designs")),
+        }
         self.controller.context["lot_context"] = lot_context
         self.controller.context["order_context"] = order_context
         self.controller.context["process_plan_context"] = process_plan_context
@@ -1665,6 +1675,29 @@ class ImportPage(QtWidgets.QWidget):
         self.controller.context.setdefault("constraint_context", {})
         print(self.controller.context)
         self.controller.show_page("separation_page")
+
+    def _open_separation_page_with_delay(
+        self,
+        lot_payload: Dict[str, Any],
+        order_payload: Dict[str, Any],
+    ) -> None:
+        thinking_dialog = ThinkingDialog(
+            self,
+            title_text="Thinking",
+            hint_text="正在进入工艺设计，请稍候",
+        )
+        delay_ms = random.randint(800, 4500)
+        thinking_dialog.show()
+        thinking_dialog.raise_()
+        thinking_dialog.activateWindow()
+        QtWidgets.QApplication.processEvents()
+
+        def _finish_open() -> None:
+            thinking_dialog.done(QtWidgets.QDialog.Accepted)
+            thinking_dialog.deleteLater()
+            self._open_separation_page(lot_payload, order_payload)
+
+        QtCore.QTimer.singleShot(delay_ms, _finish_open)
 
     def _load_fixed_process_plan_context(self) -> tuple[Dict[str, Any], str]:
         try:
@@ -1749,7 +1782,7 @@ class ImportPage(QtWidgets.QWidget):
         self.page_state["data"]["db_lots"] = db_lots
         self.pending_validation_results.pop(tmp_lot_id, None)
         self.refresh_data()
-        self._open_separation_page(lot_payload, order_payload)
+        self._open_separation_page_with_delay(lot_payload, order_payload)
 
     def on_lot_double_clicked(self, row: int, column: int) -> None:
         del column
@@ -1804,7 +1837,7 @@ class ImportPage(QtWidgets.QWidget):
             self.set_feedback(f"获取关联订单失败：{exc}")
             return
 
-        self._open_separation_page(lot_payload, order_payload)
+        self._open_separation_page_with_delay(lot_payload, order_payload)
 
     def ai_optimize_lots(self) -> None:
         order_ids = self._selected_order_ids()
@@ -1813,13 +1846,29 @@ class ImportPage(QtWidgets.QWidget):
             return
         excluded_order_lines = self._build_excluded_order_lines(order_ids)
 
-        thinking_dialog = ThinkingDialog(self)
+        thinking_dialog = ThinkingDialog(
+            self,
+            title_text="Thinking",
+            hint_text="正在生成候选批次，请稍候",
+        )
         self._set_loading(True)
+        thinking_dialog.show()
+        thinking_dialog.raise_()
+        thinking_dialog.activateWindow()
+        QtWidgets.QApplication.processEvents()
+        delay_ms = random.randint(800, 4500)
+        QtCore.QTimer.singleShot(
+            delay_ms,
+            lambda: self._run_ai_optimize_lots(order_ids, excluded_order_lines, thinking_dialog),
+        )
+
+    def _run_ai_optimize_lots(
+        self,
+        order_ids: List[str],
+        excluded_order_lines: List[Dict[str, Any]],
+        thinking_dialog: ThinkingDialog,
+    ) -> None:
         try:
-            thinking_dialog.show()
-            thinking_dialog.raise_()
-            thinking_dialog.activateWindow()
-            QtWidgets.QApplication.processEvents()
             response = self.imports_api.generate_lots(
                 selected_orders=order_ids,
                 excluded_order_lines=excluded_order_lines,

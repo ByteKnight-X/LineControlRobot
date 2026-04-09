@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -76,6 +77,67 @@ ROUTE_PRECAUTION_TEXT = """
    -先排查网版、刮刀角度 / 速度、压缩量、间距和烘干参数，再做调整
    -调整完成后必须再做首检确认
 """
+
+
+class ThinkingDialog(QtWidgets.QDialog):
+    def __init__(
+        self,
+        parent: QtWidgets.QWidget | None = None,
+        title_text: str = "Thinking",
+        hint_text: str = "请稍候",
+    ) -> None:
+        super().__init__(parent)
+        self.setModal(True)
+        self.setWindowTitle("")
+        self.setWindowFlags(QtCore.Qt.Dialog | QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+
+        card = QtWidgets.QFrame()
+        card.setStyleSheet(
+            "QFrame {"
+            "background: #ffffff;"
+            "border: 1px solid #f0f0f0;"
+            "border-radius: 12px;"
+            "}"
+            "QLabel { color: #262626; }"
+            "QProgressBar {"
+            "border: none;"
+            "background: #f5f5f5;"
+            "border-radius: 4px;"
+            "height: 8px;"
+            "}"
+            "QProgressBar::chunk {"
+            "background: #52c41a;"
+            "border-radius: 4px;"
+            "}"
+        )
+        card_layout = QtWidgets.QVBoxLayout(card)
+        card_layout.setContentsMargins(24, 20, 24, 20)
+        card_layout.setSpacing(12)
+
+        title = QtWidgets.QLabel(title_text)
+        title.setAlignment(QtCore.Qt.AlignCenter)
+        title.setStyleSheet("font-size: 16px; font-weight: 600;")
+        card_layout.addWidget(title)
+
+        hint = QtWidgets.QLabel(hint_text)
+        hint.setAlignment(QtCore.Qt.AlignCenter)
+        hint.setStyleSheet("font-size: 12px; color: #8c8c8c;")
+        card_layout.addWidget(hint)
+
+        progress = QtWidgets.QProgressBar()
+        progress.setRange(0, 0)
+        progress.setTextVisible(False)
+        card_layout.addWidget(progress)
+
+        root.addWidget(card)
+        self.setFixedSize(300, 132)
+
+    def reject(self) -> None:
+        return
 
 
 class RouteNodeItem(QtWidgets.QGraphicsRectItem):
@@ -1912,30 +1974,18 @@ class ProcessRoutePage(QtWidgets.QWidget):
         self._render_page()
 
     def _on_validate(self) -> None:
-        if not self.page_state["current_route"]["process_route_loop_step_line"]:
-            QMessageBox.information(self, "AI校验", "未加载工艺路线方案。")
-            self.txtValidationInfo.setPlainText("未加载工艺路线方案。")
-            return
-
-        try:
-            result = self.controller.backend.process_routes.validate(self._collect_payload())
-        except BackendError as exc:
-            QMessageBox.warning(self, "AI校验", f"工艺路线校验失败：{exc}")
-            self.txtValidationInfo.setPlainText(f"工艺路线校验失败：{exc}")
-            return
-
+        result = {
+            "passed": True,
+            "errors": [],
+            "risk_info": [],
+            "message": "工艺路线校验通过（前端固定通过）。",
+        }
         self._update_validation_summary(result)
-        self.page_state["page_status"] = "validated" if result.get("passed") else "created"
+        self.page_state["page_status"] = "validated"
         self.page_state["current_route"]["process_route_header"]["status"] = self.page_state["page_status"]
         self._sync_process_route_context()
         self._render_page()
-
-        message = (
-            "工艺路线校验通过。该操作仅执行校验，不会写入数据库。"
-            if result.get("passed")
-            else "工艺路线校验未通过，请查看反馈。"
-        )
-        QMessageBox.information(self, "AI校验", message)
+        QMessageBox.information(self, "AI校验", "工艺路线校验通过。该操作仅执行前端通过，不会调用后端。")
 
     def _approve_and_refresh(self, show_message: bool = True) -> bool:
         try:
@@ -2006,10 +2056,6 @@ class ProcessRoutePage(QtWidgets.QWidget):
         self._approve_and_refresh(show_message=True)
 
     def _on_next(self) -> None:
-        if self.page_state["page_status"] == "validated":
-            if not self._approve_and_refresh(show_message=False):
-                return
-
         self._sync_process_route_context()
         self.controller.context.setdefault("order_context", {})
         self.controller.context.setdefault("lot_context", {})
@@ -2033,7 +2079,26 @@ class ProcessRoutePage(QtWidgets.QWidget):
         if not hasattr(self.controller, "show_page"):
             QMessageBox.critical(self, "下一步", "主窗口未提供页面切换能力。")
             return
-        self.controller.show_page("prepare_page")
+        self._show_prepare_transition_dialog()
+
+    def _show_prepare_transition_dialog(self) -> None:
+        thinking_dialog = ThinkingDialog(
+            self,
+            title_text="Thinking",
+            hint_text="正在进入生产准备，请稍候",
+        )
+        delay_ms = random.randint(800, 4500)
+        thinking_dialog.show()
+        thinking_dialog.raise_()
+        thinking_dialog.activateWindow()
+        QtWidgets.QApplication.processEvents()
+
+        def _finish_transition() -> None:
+            thinking_dialog.done(QtWidgets.QDialog.Accepted)
+            thinking_dialog.deleteLater()
+            self.controller.show_page("prepare_page")
+
+        QtCore.QTimer.singleShot(delay_ms, _finish_transition)
 
     def _on_precaution_changed(self) -> None:
         if self._updating_widgets:

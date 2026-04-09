@@ -348,21 +348,37 @@
                             <property name="spacing"><number>8</number></property>
                             <item>
                               <widget class="QSplitter" name="meshInstructionSplitter">
-                                <property name="orientation"><enum>Qt::Vertical</enum></property>
+                                <property name="orientation"><enum>Qt::Horizontal</enum></property>
                                 <property name="childrenCollapsible"><bool>false</bool></property>
                                 <property name="handleWidth"><number>10</number></property>
                                 <widget class="QFrame" name="meshPreviewCard">
                                   <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
                                   <layout class="QVBoxLayout" name="meshPreviewLayout">
-                                    <property name="leftMargin"><number>10</number></property>
-                                    <property name="topMargin"><number>10</number></property>
-                                    <property name="rightMargin"><number>10</number></property>
-                                    <property name="bottomMargin"><number>10</number></property>
-                                    <property name="spacing"><number>8</number></property>
-                                    <item><widget class="QLabel" name="lblMeshPreviewTitle"><property name="text"><string>网版图案设计</string></property></widget></item>
+                                    <property name="leftMargin"><number>8</number></property>
+                                    <property name="topMargin"><number>8</number></property>
+                                    <property name="rightMargin"><number>8</number></property>
+                                    <property name="bottomMargin"><number>8</number></property>
+                                    <property name="spacing"><number>6</number></property>
                                     <item>
+                                      <widget class="QLabel" name="lblMeshPreviewTitle">
+                                        <property name="text"><string>网版图案设计</string></property>
+                                        <property name="alignment">
+                                          <set>Qt::AlignLeft|Qt::AlignTop</set>
+                                        </property>
+                                        <property name="styleSheet">
+                                          <string>font-weight:600; color:#262626;</string>
+                                        </property>
+                                      </widget>
+                                    </item>
+                                    <item stretch="1">
                                       <widget class="QFrame" name="meshPreviewHost">
                                         <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+                                        <property name="sizePolicy">
+                                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                            <horstretch>0</horstretch>
+                                            <verstretch>0</verstretch>
+                                          </sizepolicy>
+                                        </property>
                                         <layout class="QVBoxLayout" name="meshPreviewHostLayout">
                                           <property name="leftMargin"><number>0</number></property>
                                           <property name="topMargin"><number>0</number></property>
@@ -376,14 +392,30 @@
                                 <widget class="QFrame" name="meshParamCard">
                                   <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
                                   <layout class="QVBoxLayout" name="meshParamLayout">
-                                    <property name="leftMargin"><number>10</number></property>
-                                    <property name="topMargin"><number>10</number></property>
-                                    <property name="rightMargin"><number>10</number></property>
-                                    <property name="bottomMargin"><number>10</number></property>
-                                    <property name="spacing"><number>8</number></property>
-                                    <item><widget class="QLabel" name="lblMeshParamTitle"><property name="text"><string>参数栏</string></property></widget></item>
+                                    <property name="leftMargin"><number>8</number></property>
+                                    <property name="topMargin"><number>8</number></property>
+                                    <property name="rightMargin"><number>8</number></property>
+                                    <property name="bottomMargin"><number>8</number></property>
+                                    <property name="spacing"><number>6</number></property>
                                     <item>
+                                      <widget class="QLabel" name="lblMeshParamTitle">
+                                        <property name="text"><string>参数栏</string></property>
+                                        <property name="alignment">
+                                          <set>Qt::AlignLeft|Qt::AlignTop</set>
+                                        </property>
+                                        <property name="styleSheet">
+                                          <string>font-weight:600; color:#262626;</string>
+                                        </property>
+                                      </widget>
+                                    </item>
+                                    <item stretch="1">
                                       <widget class="QTableWidget" name="tableMeshParams">
+                                        <property name="sizePolicy">
+                                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                            <horstretch>0</horstretch>
+                                            <verstretch>0</verstretch>
+                                          </sizepolicy>
+                                        </property>
                                         <property name="columnCount"><number>2</number></property>
                                         <column>
                                           <property name="text"><string>参数名称</string></property>

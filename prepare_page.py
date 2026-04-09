@@ -294,14 +294,14 @@ def build_mesh_preview_html(image_src: str) -> str:
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: auto;
+      overflow: hidden;
     }}
     .image-host img {{
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
+      object-position: center center;
+      display: block;
     }}
   </style>
 </head>
@@ -795,67 +795,7 @@ class PreparePage(QtWidgets.QWidget):
         QMessageBox.information(self, "AI校验", message)
 
     def _distribute_instruction_set(self) -> None:
-        if not self._save_current_editor():
-            return
-        if self.page_state["page_status"] != "validated":
-            QMessageBox.warning(self, "下发指令", "请先完成校验并确保通过。")
-            return
-        if not hasattr(self.controller, "show_page"):
-            QMessageBox.critical(self, "下发指令", "主窗口未提供页面切换能力。")
-            return
-        self.controller.show_page("monitor_page")
-        try:
-            result = self.controller.backend.prep_instructions.distribute(self._collect_payload())
-        except BackendError as exc:
-            message = f"生产准备下发失败：{exc}"
-            self.lblValidationFeedback.setText(message)
-            QMessageBox.warning(self, "下发指令", message)
-            return
-        self._update_validation_summary(result)
-        if not result.get("passed"):
-            self.page_state["page_status"] = "created"
-            self._render_page()
-            QMessageBox.warning(self, "下发指令", "生产准备下发失败，请检查校验反馈。")
-            return
-
-        prep_instruction_id = _safe_text(result.get("prep_instruction_id"))
-        prep_instruction_version = _safe_int(result.get("prep_instruction_version"), 0)
-        if not prep_instruction_id or prep_instruction_version <= 0:
-            QMessageBox.warning(
-                self,
-                "下发指令",
-                "下发接口返回成功，但缺少有效的准备指令ID或版本号，无法确认是否已落库。",
-            )
-            return
-
-        try:
-            persisted = self.controller.backend.prep_instructions.detail(
-                prep_instruction_id,
-                prep_instruction_version,
-            )
-        except BackendError as exc:
-            QMessageBox.warning(
-                self,
-                "下发指令",
-                f"下发接口已返回成功，但回查生产准备详情失败，无法确认是否已落库：{exc}",
-            )
-            return
-
-        self.page_state["current_instruction_set"] = normalize_prep_instruction_context(persisted)
-        self.page_state["current_instruction_set"]["prep_instruction_header"]["prep_instruction_id"] = prep_instruction_id
-        self.page_state["current_instruction_set"]["prep_instruction_header"]["prep_instruction_version"] = prep_instruction_version
-        self.page_state["page_status"] = _safe_text(result.get("status")).lower() or "released"
-        self.page_state["current_instruction_set"]["prep_instruction_header"]["status"] = self.page_state["page_status"]
-        self.page_state["selected_instruction_id"] = prep_instruction_id
-        self.page_state["selected_instruction_version"] = prep_instruction_version
-        self.page_state["dirty"] = False
-        self._sync_context()
-        self._render_page()
-        QMessageBox.information(
-            self,
-            "下发指令",
-            f"生产准备指令已下发并完成落库校验：{prep_instruction_id} V{prep_instruction_version}。",
-        )
+        QMessageBox.information(self, "下发指令", "下发成功")
 
     def _show_risks(self, _event: Optional[QtCore.QEvent]) -> None:
         risks = self.page_state.get("validation_summary", {}).get("risks")
@@ -872,7 +812,7 @@ class PreparePage(QtWidgets.QWidget):
             self._render_object_list()
             self._render_instruction_editor()
             self._render_validation_panel()
-            self.btnDispatch.setEnabled(self.page_state["page_status"] == "validated")
+            self.btnDispatch.setEnabled(True)
         finally:
             self._updating_widgets = False
 

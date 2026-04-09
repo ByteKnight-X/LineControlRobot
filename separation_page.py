@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import random
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -71,6 +72,67 @@ class PreviewWebEngineView(QWebEngineView):
         super().wheelEvent(event)
 
 
+class ThinkingDialog(QtWidgets.QDialog):
+    def __init__(
+        self,
+        parent: QtWidgets.QWidget | None = None,
+        title_text: str = "Thinking",
+        hint_text: str = "请稍候",
+    ) -> None:
+        super().__init__(parent)
+        self.setModal(True)
+        self.setWindowTitle("")
+        self.setWindowFlags(QtCore.Qt.Dialog | QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+
+        card = QtWidgets.QFrame()
+        card.setStyleSheet(
+            "QFrame {"
+            "background: #ffffff;"
+            "border: 1px solid #f0f0f0;"
+            "border-radius: 12px;"
+            "}"
+            "QLabel { color: #262626; }"
+            "QProgressBar {"
+            "border: none;"
+            "background: #f5f5f5;"
+            "border-radius: 4px;"
+            "height: 8px;"
+            "}"
+            "QProgressBar::chunk {"
+            "background: #52c41a;"
+            "border-radius: 4px;"
+            "}"
+        )
+        card_layout = QtWidgets.QVBoxLayout(card)
+        card_layout.setContentsMargins(24, 20, 24, 20)
+        card_layout.setSpacing(12)
+
+        title = QtWidgets.QLabel(title_text)
+        title.setAlignment(QtCore.Qt.AlignCenter)
+        title.setStyleSheet("font-size: 16px; font-weight: 600;")
+        card_layout.addWidget(title)
+
+        hint = QtWidgets.QLabel(hint_text)
+        hint.setAlignment(QtCore.Qt.AlignCenter)
+        hint.setStyleSheet("font-size: 12px; color: #8c8c8c;")
+        card_layout.addWidget(hint)
+
+        progress = QtWidgets.QProgressBar()
+        progress.setRange(0, 0)
+        progress.setTextVisible(False)
+        card_layout.addWidget(progress)
+
+        root.addWidget(card)
+        self.setFixedSize(300, 132)
+
+    def reject(self) -> None:
+        return
+
+
 def _text(value: Any) -> str:
     return "" if value is None else str(value)
 
@@ -80,6 +142,12 @@ def _message_lines(value: Any) -> List[str]:
         return [_text(item).strip() for item in value if _text(item).strip()]
     message = _text(value).strip()
     return [message] if message else []
+
+
+def _as_dict_list(value: Any) -> List[Dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict)]
 
 
 def _normalize_sizes(value: Any) -> List[int]:
@@ -267,10 +335,10 @@ def _build_svg_html(image_src: str) -> str:
       background: #fafafa;
     }}
     .svg-host img {{
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center center;
       display: block;
     }}
   </style>
@@ -640,10 +708,6 @@ class SeparationPage(QtWidgets.QWidget):
             "load_message": "",
             "print_param_rows": {},
             "db_process_plan": [],
-            "current_plan": {
-                "process_plan_header": {},
-                "process_plan_line": [],
-            },
             "current_process_plan": {
                 "process_plan_header": {},
                 "process_plan_line": [],
@@ -746,12 +810,11 @@ class SeparationPage(QtWidgets.QWidget):
         if not isinstance(lines, list):
             lines = self._build_lines_from_context(context)
 
-        self.page_state["current_plan"] = {
+        self.page_state["current_process_plan"] = {
             "process_plan_header": dict(header) if isinstance(header, dict) else {},
             "process_plan_line": [dict(item) for item in lines if isinstance(item, dict)],
         }
-        self.page_state["current_process_plan"] = self.page_state["current_plan"]
-        status = _text(self.page_state["current_plan"]["process_plan_header"].get("status")).strip().lower()
+        status = _text(self.page_state["current_process_plan"]["process_plan_header"].get("status")).strip().lower()
         self.page_state["page_status"] = "Frozen" if status in {"validated", "frozen"} else "draft"
         self.page_state["dirty"] = False
         self.page_state["validation_summary"] = {
@@ -761,10 +824,9 @@ class SeparationPage(QtWidgets.QWidget):
         }
         self.page_state["load_message"] = load_message
         self.page_state["active_mesh_index"] = 0
-        header_data = self.page_state["current_plan"]["process_plan_header"]
+        header_data = self.page_state["current_process_plan"]["process_plan_header"]
         self.page_state["focus"]["selected_process_plan_id"] = header_data.get("process_plan_id")
         self.page_state["focus"]["selected_process_plan_version"] = header_data.get("process_plan_version")
-        self._render_page()
         self.page_state["active_mesh_index"] = 0
         self._render_page()
 
@@ -840,8 +902,9 @@ class SeparationPage(QtWidgets.QWidget):
 
     def _render_page(self) -> None:
         self._setting_up_widgets = True
-        header = self.page_state["current_plan"]["process_plan_header"]
-        line = self._active_line()
+        header = self.page_state["current_process_plan"]["process_plan_header"]
+        line = self._active_process_plan_line() or {}
+        is_order_preview = self._is_order_pattern_preview_active()
 
         self.txtPlanId.setText(_text(header.get("process_plan_id")))
         self.txtPlanVer.setText(_text(header.get("process_plan_version")))
@@ -860,6 +923,7 @@ class SeparationPage(QtWidgets.QWidget):
         self.spinTpi.setValue(int(float(line.get("tpi") or 0)))
         self.spinTension.setValue(float(line.get("tension") or 0))
         self._render_print_params_table(line)
+        self._set_mesh_editing_enabled(not is_order_preview)
 
         self._render_validation()
         self._render_preview()
@@ -873,6 +937,8 @@ class SeparationPage(QtWidgets.QWidget):
         load_message = _text(self.page_state.get("load_message")).strip()
         if load_message:
             lines.append(f"加载结果：{load_message}")
+        if self._is_order_pattern_preview_active():
+            lines.append("当前为订单图案预览项（index=0），不参与工艺方案编辑与保存。")
         lines.append(f"是否有未保存修改：{'是' if self.page_state['dirty'] else '否'}")
         lines.append(f"校验状态：{'通过' if summary.get('passed') else '未通过'}")
         errors = _message_lines(summary.get("errors"))
@@ -884,8 +950,8 @@ class SeparationPage(QtWidgets.QWidget):
         self.txtValidationInfo.setPlainText("\n".join(lines))
 
     def _render_preview(self) -> None:
-        line = self._active_line()
-        svg_text = _text(line.get("pattern_design")).strip()
+        preview_item = self._active_preview_item()
+        svg_text = _text(preview_item.get("pattern_design")).strip()
         base_url = QtCore.QUrl.fromLocalFile(str(Path(__file__).resolve().parent) + "/")
         if isinstance(self.graphicsPreview, PreviewWebEngineView):
             self.graphicsPreview.reset_zoom()
@@ -927,15 +993,110 @@ class SeparationPage(QtWidgets.QWidget):
             index = combo.findText(text)
         combo.setCurrentIndex(index)
 
-    def _active_line(self) -> Dict[str, Any]:
-        lines = self.page_state["current_plan"]["process_plan_line"]
-        if not lines:
+    def _preview_items(self) -> List[Dict[str, Any]]:
+        lines = self.page_state["current_process_plan"]["process_plan_line"]
+        items: List[Dict[str, Any]] = []
+        context = getattr(self.controller, "context", {}) or {}
+        order_preview = self._build_order_pattern_preview_from_context(context)
+        if order_preview is not None:
+            items.append(order_preview)
+        items.extend(
+            {
+                "preview_kind": "process_plan_line",
+                "line_ref_index": index,
+                "display_index": _mesh_index_value(line.get("mesh_index"), index + 1),
+                "pattern_design": line.get("pattern_design"),
+            }
+            for index, line in enumerate(lines)
+        )
+        return items
+
+    def _active_preview_item(self) -> Dict[str, Any]:
+        preview_items = self._preview_items()
+        if not preview_items:
             return {}
         index = self.page_state["active_mesh_index"]
-        if index < 0 or index >= len(lines):
+        if index < 0 or index >= len(preview_items):
             self.page_state["active_mesh_index"] = 0
-            return lines[0]
-        return lines[index]
+            return preview_items[0]
+        return preview_items[index]
+
+    def _active_process_plan_line(self) -> Dict[str, Any] | None:
+        preview_item = self._active_preview_item()
+        if preview_item.get("preview_kind") != "process_plan_line":
+            return None
+        line_index = preview_item.get("line_ref_index")
+        lines = self.page_state["current_process_plan"]["process_plan_line"]
+        if not isinstance(line_index, int) or line_index < 0 or line_index >= len(lines):
+            return None
+        return lines[line_index]
+
+    def _is_order_pattern_preview_active(self) -> bool:
+        return self._active_preview_item().get("preview_kind") == "order_pattern"
+
+    def _set_mesh_editing_enabled(self, enabled: bool) -> None:
+        editors: List[QtWidgets.QWidget] = [
+            self.txtWireMaterial,
+            self.txtWireModel,
+            self.txtWireDia,
+            self.txtFrameSpec,
+            self.cmbStretchMethod,
+            self.spinStretchAngle,
+            self.spinTpi,
+            self.spinTension,
+            self.tblPrintParams,
+        ]
+        for widget in editors:
+            widget.setEnabled(enabled)
+
+    def _build_order_pattern_preview_from_context(self, context: Dict[str, Any]) -> Dict[str, Any] | None:
+        lot_context = context.get("lot_context")
+        order_context = context.get("order_context")
+        if not isinstance(lot_context, dict) or not isinstance(order_context, dict):
+            return None
+
+        lot_lines = _as_dict_list(lot_context.get("lot_line") or lot_context.get("lines"))
+        order_lines = _as_dict_list(order_context.get("order_line") or order_context.get("lines"))
+        pattern_designs = _as_dict_list(order_context.get("pattern_designs"))
+        if not order_lines or not pattern_designs:
+            return None
+
+        lot_first_line = lot_lines[0] if lot_lines else {}
+        source_order_line_id = lot_first_line.get("source_order_line_id")
+        order_line: Dict[str, Any] | None = None
+        if source_order_line_id not in (None, ""):
+            for candidate in order_lines:
+                if _text(candidate.get("order_line_id")).strip() == _text(source_order_line_id).strip():
+                    order_line = candidate
+                    break
+        if order_line is None:
+            order_line = order_lines[0]
+
+        pattern_design_id = _text(order_line.get("pattern_design_id")).strip()
+        if not pattern_design_id:
+            return None
+
+        pattern_design = next(
+            (
+                item
+                for item in pattern_designs
+                if _text(item.get("pattern_design_id")).strip() == pattern_design_id
+            ),
+            None,
+        )
+        if pattern_design is None:
+            return None
+
+        svg_text = _text(pattern_design.get("pattern_design")).strip()
+        if not svg_text or not _looks_like_svg_content(svg_text):
+            return None
+
+        return {
+            "preview_kind": "order_pattern",
+            "display_index": 0,
+            "label": "订单图案",
+            "pattern_design": svg_text,
+        }
 
     def _print_param_row_index(self, field_name: str) -> int:
         row = self.page_state.get("print_param_rows", {}).get(field_name)
@@ -1069,32 +1230,43 @@ class SeparationPage(QtWidgets.QWidget):
         self._render_mesh_navigation()
 
     def _render_mesh_navigation(self) -> None:
-        lines = self.page_state["current_plan"]["process_plan_line"]
+        preview_items = self._preview_items()
+        lines = self.page_state["current_process_plan"]["process_plan_line"]
         loading = self.page_state["loading"]
-        if not lines:
+        if not preview_items:
             self.lblMeshPager.setText("0 / 0")
             self.btnPrevMesh.setEnabled(False)
             self.btnNextMesh.setEnabled(False)
             return
 
-        max_index = len(lines) - 1
+        max_index = len(preview_items) - 1
         active_index = min(max(self.page_state["active_mesh_index"], 0), max_index)
         self.page_state["active_mesh_index"] = active_index
-        current_mesh_index = _mesh_index_value(lines[active_index].get("mesh_index"), active_index + 1)
-        max_mesh_index = _mesh_index_value(lines[max_index].get("mesh_index"), len(lines))
+        current_mesh_index = _mesh_index_value(
+            preview_items[active_index].get("display_index"),
+            active_index,
+        )
+        max_mesh_index = 0
+        if lines:
+            max_mesh_index = _mesh_index_value(lines[-1].get("mesh_index"), len(lines))
 
         self.lblMeshPager.setText(f"{current_mesh_index} / {max_mesh_index}")
         self.btnPrevMesh.setEnabled((not loading) and active_index > 0)
         self.btnNextMesh.setEnabled((not loading) and active_index < max_index)
 
     def _collect_current_mesh_from_widgets(self) -> None:
-        lines = self.page_state["current_plan"]["process_plan_line"]
+        if self._is_order_pattern_preview_active():
+            return
+        lines = self.page_state["current_process_plan"]["process_plan_line"]
         if not lines:
             lines.append({"mesh_index": 1})
             self.page_state["active_mesh_index"] = 0
-        line = lines[self.page_state["active_mesh_index"]]
+        line = self._active_process_plan_line()
+        if line is None:
+            return
         base_operation = _parse_operation_dict(line.get("operation"))
-        line["mesh_index"] = line.get("mesh_index") or self.page_state["active_mesh_index"] + 1
+        active_preview_item = self._active_preview_item()
+        line["mesh_index"] = line.get("mesh_index") or active_preview_item.get("display_index") or 1
         line["material"] = self.txtWireMaterial.text().strip()
         line["mesh_model"] = self.txtWireModel.text().strip()
         line["diameter"] = self.txtWireDia.text().strip()
@@ -1117,9 +1289,9 @@ class SeparationPage(QtWidgets.QWidget):
     def _on_next_mesh(self) -> None:
         if self.page_state["loading"]:
             return
-        lines = self.page_state["current_plan"]["process_plan_line"]
+        preview_items = self._preview_items()
         self._collect_current_mesh_from_widgets()
-        if self.page_state["active_mesh_index"] >= len(lines) - 1:
+        if self.page_state["active_mesh_index"] >= len(preview_items) - 1:
             return
         self.page_state["active_mesh_index"] += 1
         self._render_page()
@@ -1135,19 +1307,18 @@ class SeparationPage(QtWidgets.QWidget):
     def _load_process_plan(self, plan_detail: Dict[str, Any]) -> None:
         header = plan_detail.get("process_plan_header")
         lines = plan_detail.get("process_plan_line")
-        self.page_state["current_plan"] = {
+        self.page_state["current_process_plan"] = {
             "process_plan_header": dict(header) if isinstance(header, dict) else {},
             "process_plan_line": [dict(item) for item in lines if isinstance(item, dict)] if isinstance(lines, list) else [],
         }
-        self.page_state["current_process_plan"] = self.page_state["current_plan"]
-        status = _text(self.page_state["current_plan"]["process_plan_header"].get("status")).strip().lower()
+        status = _text(self.page_state["current_process_plan"]["process_plan_header"].get("status")).strip().lower()
         self.page_state["page_status"] = "Frozen" if status in {"frozen", "validated"} else "draft"
         self.page_state["dirty"] = False
         self.page_state["active_mesh_index"] = 0
-        self.page_state["focus"]["selected_process_plan_id"] = self.page_state["current_plan"]["process_plan_header"].get(
+        self.page_state["focus"]["selected_process_plan_id"] = self.page_state["current_process_plan"]["process_plan_header"].get(
             "process_plan_id"
         )
-        self.page_state["focus"]["selected_process_plan_version"] = self.page_state["current_plan"][
+        self.page_state["focus"]["selected_process_plan_version"] = self.page_state["current_process_plan"][
             "process_plan_header"
         ].get("process_plan_version")
         self.page_state["validation_summary"] = {
@@ -1160,15 +1331,15 @@ class SeparationPage(QtWidgets.QWidget):
     def _sync_process_plan_context(self) -> None:
         context = getattr(self.controller, "context", {})
         context["process_plan_context"] = {
-            "process_plan_header": dict(self.page_state["current_plan"]["process_plan_header"]),
-            "process_plan_line": [dict(item) for item in self.page_state["current_plan"]["process_plan_line"]],
+            "process_plan_header": dict(self.page_state["current_process_plan"]["process_plan_header"]),
+            "process_plan_line": [dict(item) for item in self.page_state["current_process_plan"]["process_plan_line"]],
         }
         context["separation_plan"] = self._build_legacy_separation_plan()
         context["separationPlan"] = context["separation_plan"]
 
     def _build_payload(self) -> Dict[str, Any]:
         self._collect_current_mesh_from_widgets()
-        header = dict(self.page_state["current_plan"]["process_plan_header"])
+        header = dict(self.page_state["current_process_plan"]["process_plan_header"])
         header_payload = {
             "sku": header.get("sku"),
             "sizes": _normalize_sizes(header.get("sizes")),
@@ -1176,7 +1347,7 @@ class SeparationPage(QtWidgets.QWidget):
             "validated_by": header.get("validated_by"),
         }
         lines: List[Dict[str, Any]] = []
-        for item in self.page_state["current_plan"]["process_plan_line"]:
+        for item in self.page_state["current_process_plan"]["process_plan_line"]:
             line = {
                 "mesh_index": item.get("mesh_index"),
                 "sizes": item.get("sizes") or _sizes_to_display(header_payload["sizes"]),
@@ -1201,7 +1372,7 @@ class SeparationPage(QtWidgets.QWidget):
 
     def _build_legacy_separation_plan(self) -> List[Dict[str, Any]]:
         items: List[Dict[str, Any]] = []
-        for index, line in enumerate(self.page_state["current_plan"]["process_plan_line"]):
+        for index, line in enumerate(self.page_state["current_process_plan"]["process_plan_line"]):
             mesh_index = line.get("mesh_index", index + 1)
             try:
                 mesh_index = int(mesh_index) - 1
@@ -1325,7 +1496,7 @@ class SeparationPage(QtWidgets.QWidget):
             QMessageBox.warning(self, "批准方案", "方案批准失败，请检查校验反馈。")
             return
 
-        header = self.page_state["current_plan"]["process_plan_header"]
+        header = self.page_state["current_process_plan"]["process_plan_header"]
         header["process_plan_id"] = result.get("process_plan_id")
         header["process_plan_version"] = result.get("process_plan_version")
         header["status"] = result.get("status")
@@ -1356,7 +1527,26 @@ class SeparationPage(QtWidgets.QWidget):
         if not hasattr(self.controller, "show_page"):
             QMessageBox.critical(self, "下一步", "主窗口未提供页面切换能力。")
             return
-        self.controller.show_page("process_route_page")
+        self._show_route_transition_dialog()
+
+    def _show_route_transition_dialog(self) -> None:
+        thinking_dialog = ThinkingDialog(
+            self,
+            title_text="Thinking",
+            hint_text="正在进入工艺路线，请稍候",
+        )
+        delay_ms = random.randint(800, 4500)
+        thinking_dialog.show()
+        thinking_dialog.raise_()
+        thinking_dialog.activateWindow()
+        QtWidgets.QApplication.processEvents()
+
+        def _finish_transition() -> None:
+            thinking_dialog.done(QtWidgets.QDialog.Accepted)
+            thinking_dialog.deleteLater()
+            self.controller.show_page("process_route_page")
+
+        QtCore.QTimer.singleShot(delay_ms, _finish_transition)
 
     def _load_fixed_process_route_context(self) -> tuple[dict, str]:
         try:
